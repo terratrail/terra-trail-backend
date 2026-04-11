@@ -6,6 +6,8 @@ from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 
 from core.permissions import IsWorkspaceAdmin, IsWorkspaceAdminOrReadOnly
 from commissions.models import Commission, SalesRep
@@ -92,6 +94,16 @@ class CommissionMarkPaidView(APIView):
 
     permission_classes = [IsAuthenticated, IsWorkspaceAdmin]
 
+    @swagger_auto_schema(
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                "notes": openapi.Schema(type=openapi.TYPE_STRING, description="Payout notes"),
+            },
+        ),
+        responses={200: CommissionSerializer},
+        operation_description="Mark a pending commission as paid.",
+    )
     def post(self, request, id):
         try:
             commission = Commission.objects.get(

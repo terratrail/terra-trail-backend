@@ -18,6 +18,11 @@ PUBLIC_PATHS = [
     r"^/api/v1/auth/",
     r"^/api/v1/workspaces/create/?$",
     r"^/api/v1/workspaces/mine/?$",
+    r"^/api/v1/docs/",
+    r"^/api/v1/redoc/",
+    r"^/swagger",
+    r"^/static/",
+    r"^/media/",
 ]
 
 

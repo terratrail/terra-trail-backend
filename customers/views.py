@@ -6,6 +6,8 @@ from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 
 from core.permissions import IsWorkspaceAdmin, IsWorkspaceAdminOrReadOnly
 from customers.models import Customer, Installment, Subscription
@@ -46,6 +48,11 @@ class CustomerListCreateView(generics.ListCreateAPIView):
             workspace=self.request.workspace
         ).order_by("-created_at")
 
+    @swagger_auto_schema(
+        request_body=CustomerCreateSerializer,
+        responses={201: CustomerSerializer},
+        operation_description="Create a customer (optionally with subscription).",
+    )
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -152,6 +159,20 @@ class SubscriptionCreateView(APIView):
 
     permission_classes = [IsAuthenticated, IsWorkspaceAdmin]
 
+    @swagger_auto_schema(
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=["customer_id", "property_id", "pricing_plan_id"],
+            properties={
+                "customer_id": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID),
+                "property_id": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID),
+                "pricing_plan_id": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID),
+                "notes": openapi.Schema(type=openapi.TYPE_STRING),
+            },
+        ),
+        responses={201: SubscriptionSerializer},
+        operation_description="Create a subscription for an existing customer.",
+    )
     def post(self, request):
         customer_id = request.data.get("customer_id")
         property_id = request.data.get("property_id")

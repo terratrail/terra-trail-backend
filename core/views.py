@@ -6,6 +6,7 @@ from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from drf_yasg.utils import swagger_auto_schema
 
 from accounts.models import WorkspaceMembership
 from core.models import Workspace
@@ -46,6 +47,10 @@ class MyWorkspacesView(APIView):
 
     permission_classes = [IsAuthenticated]
 
+    @swagger_auto_schema(
+        responses={200: WorkspaceMinimalSerializer(many=True)},
+        operation_description="Lists all workspaces the authenticated user belongs to.",
+    )
     def get(self, request):
         memberships = WorkspaceMembership.objects.filter(
             user=request.user, is_active=True

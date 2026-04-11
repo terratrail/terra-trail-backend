@@ -7,6 +7,8 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenRefreshView
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 
 from accounts.models import User, WorkspaceMembership
 from accounts.serializers import (
@@ -31,6 +33,11 @@ class RegisterView(APIView):
 
     permission_classes = [AllowAny]
 
+    @swagger_auto_schema(
+        request_body=RegisterSerializer,
+        responses={201: UserSerializer},
+        operation_description="Register a new user account. Returns JWT tokens.",
+    )
     def post(self, request):
         serializer = RegisterSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -58,6 +65,11 @@ class LoginView(APIView):
 
     permission_classes = [AllowAny]
 
+    @swagger_auto_schema(
+        request_body=LoginSerializer,
+        responses={200: UserSerializer},
+        operation_description="Authenticate with email + password. Returns JWT tokens.",
+    )
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -98,6 +110,11 @@ class OTPRequestView(APIView):
 
     permission_classes = [AllowAny]
 
+    @swagger_auto_schema(
+        request_body=OTPRequestSerializer,
+        responses={200: openapi.Response("OTP sent successfully.")},
+        operation_description="Request an OTP for customer portal login.",
+    )
     def post(self, request):
         serializer = OTPRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -127,6 +144,11 @@ class OTPVerifyView(APIView):
 
     permission_classes = [AllowAny]
 
+    @swagger_auto_schema(
+        request_body=OTPVerifySerializer,
+        responses={200: UserSerializer},
+        operation_description="Verify an OTP and return session tokens.",
+    )
     def post(self, request):
         serializer = OTPVerifySerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -171,6 +193,11 @@ class AddMemberView(APIView):
 
     permission_classes = [IsAuthenticated, IsWorkspaceAdmin]
 
+    @swagger_auto_schema(
+        request_body=AddMemberSerializer,
+        responses={201: WorkspaceMembershipSerializer},
+        operation_description="Add a user to the current workspace.",
+    )
     def post(self, request):
         serializer = AddMemberSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
