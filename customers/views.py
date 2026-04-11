@@ -1,0 +1,214 @@
+"""
+Customers views — CRUD for customers and subscriptions.
+"""
+
+from rest_framework import generics, status
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from core.permissions import IsWorkspaceAdmin, IsWorkspaceAdminOrReadOnly
+from customers.models import Customer, Installment, Subscription
+from customers.serializers import (
+    CustomerCreateSerializer,
+    CustomerDetailSerializer,
+    CustomerSerializer,
+    InstallmentSerializer,
+    SubscriptionListSerializer,
+    SubscriptionSerializer,
+)
+from customers.services import SubscriptionService
+from properties.models import PricingPlan, Property
+
+
+# ---------------------------------------------------------------------------
+# Customer endpoints
+# ---------------------------------------------------------------------------
+
+
+class CustomerListCreateView(generics.ListCreateAPIView):
+    """
+    GET  /api/v1/customers/          — List customers
+    POST /api/v1/customers/          — Create a customer (optionally with subscription)
+    """
+
+    permission_classes = [IsAuthenticated, IsWorkspaceAdminOrReadOnly]
+    filterset_fields = ["referral_source"]
+    search_fields = ["full_name", "email", "phone"]
+
+    def get_serializer_class(self):
+        if self.request.method == "POST":
+            return CustomerCreateSerializer
+        return CustomerSerializer
+
+    def get_queryset(self):
+        return Customer.objects.filter(
+            workspace=self.request.workspace
+        ).order_by("-created_at")
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        data = serializer.validated_data
+        property_id = data.pop("property_id", None)
+        pricing_plan_id = data.pop("pricing_plan_id", None)
+
+        # Create customer
+        customer = Customer.objects.create(
+            workspace=request.workspace, **data
+        )
+
+        response_data = CustomerSerializer(customer).data
+
+        # Optionally create subscription
+        if property_id and pricing_plan_id:
+            try:
+                property_obj = Property.objects.get(
+                    id=property_id, workspace=request.workspace
+                )
+                pricing_plan = PricingPlan.objects.get(
+                    id=pricing_plan_id,
+                    workspace=request.workspace,
+                    is_active=True,
+                )
+                subscription = SubscriptionService.create_subscription(
+                    workspace=request.workspace,
+                    customer=customer,
+                    property_obj=property_obj,
+                    pricing_plan=pricing_plan,
+                )
+                response_data["subscription"] = SubscriptionSerializer(subscription).data
+            except (Property.DoesNotExist, PricingPlan.DoesNotExist) as e:
+                return Response(
+                    {"detail": "Invalid property or pricing plan.", "customer": response_data},
+                    status=status.HTTP_201_CREATED,
+                )
+
+        return Response(response_data, status=status.HTTP_201_CREATED)
+
+
+class CustomerDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """GET/PATCH/DELETE /api/v1/customers/<id>/"""
+
+    permission_classes = [IsAuthenticated, IsWorkspaceAdminOrReadOnly]
+    lookup_field = "id"
+
+    def get_serializer_class(self):
+        if self.request.method == "GET":
+            return CustomerDetailSerializer
+        return CustomerSerializer
+
+    def get_queryset(self):
+        return Customer.objects.filter(
+            workspace=self.request.workspace
+        ).prefetch_related(
+            "subscriptions__property",
+            "subscriptions__pricing_plan",
+        )
+
+
+# ---------------------------------------------------------------------------
+# Subscription endpoints
+# ---------------------------------------------------------------------------
+
+
+class SubscriptionListView(generics.ListAPIView):
+    """GET /api/v1/customers/subscriptions/"""
+
+    serializer_class = SubscriptionListSerializer
+    permission_classes = [IsAuthenticated, IsWorkspaceAdminOrReadOnly]
+    filterset_fields = ["status", "customer"]
+
+    def get_queryset(self):
+        return (
+            Subscription.objects.filter(workspace=self.request.workspace)
+            .select_related("customer", "property", "pricing_plan")
+            .order_by("-created_at")
+        )
+
+
+class SubscriptionDetailView(generics.RetrieveAPIView):
+    """GET /api/v1/customers/subscriptions/<id>/"""
+
+    serializer_class = SubscriptionSerializer
+    permission_classes = [IsAuthenticated, IsWorkspaceAdminOrReadOnly]
+    lookup_field = "id"
+
+    def get_queryset(self):
+        return (
+            Subscription.objects.filter(workspace=self.request.workspace)
+            .select_related("customer", "property", "pricing_plan")
+            .prefetch_related("installments")
+        )
+
+
+class SubscriptionCreateView(APIView):
+    """
+    POST /api/v1/customers/subscriptions/create/
+
+    Create a subscription for an existing customer.
+    """
+
+    permission_classes = [IsAuthenticated, IsWorkspaceAdmin]
+
+    def post(self, request):
+        customer_id = request.data.get("customer_id")
+        property_id = request.data.get("property_id")
+        pricing_plan_id = request.data.get("pricing_plan_id")
+        notes = request.data.get("notes", "")
+
+        if not all([customer_id, property_id, pricing_plan_id]):
+            return Response(
+                {"detail": "customer_id, property_id, and pricing_plan_id are required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            customer = Customer.objects.get(id=customer_id, workspace=request.workspace)
+            property_obj = Property.objects.get(id=property_id, workspace=request.workspace)
+            pricing_plan = PricingPlan.objects.get(
+                id=pricing_plan_id, workspace=request.workspace, is_active=True
+            )
+        except (Customer.DoesNotExist, Property.DoesNotExist, PricingPlan.DoesNotExist):
+            return Response(
+                {"detail": "Invalid customer, property, or pricing plan."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        subscription = SubscriptionService.create_subscription(
+            workspace=request.workspace,
+            customer=customer,
+            property_obj=property_obj,
+            pricing_plan=pricing_plan,
+            notes=notes,
+        )
+
+        return Response(
+            SubscriptionSerializer(subscription).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+# ---------------------------------------------------------------------------
+# Installment endpoints
+# ---------------------------------------------------------------------------
+
+
+class InstallmentListView(generics.ListAPIView):
+    """
+    GET /api/v1/customers/installments/
+
+    List installments, filterable by subscription and status.
+    """
+
+    serializer_class = InstallmentSerializer
+    permission_classes = [IsAuthenticated, IsWorkspaceAdminOrReadOnly]
+    filterset_fields = ["status", "subscription"]
+
+    def get_queryset(self):
+        return (
+            Installment.objects.filter(workspace=self.request.workspace)
+            .select_related("subscription")
+            .order_by("due_date")
+        )

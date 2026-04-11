@@ -1,0 +1,73 @@
+"""
+Workspace middleware — Extracts workspace from the request.
+
+Supports two resolution strategies:
+1. X-Workspace header (slug)
+2. Subdomain extraction (e.g., acme.terratrail.io)
+
+Public endpoints (auth, docs) skip workspace resolution.
+"""
+
+import re
+from django.http import JsonResponse
+from core.models import Workspace
+
+# URL patterns that do NOT require workspace context
+PUBLIC_PATHS = [
+    r"^/admin/",
+    r"^/api/v1/auth/",
+    r"^/api/v1/workspaces/create/?$",
+    r"^/api/v1/workspaces/mine/?$",
+]
+
+
+class WorkspaceMiddleware:
+    """
+    Injects `request.workspace` for all workspace-scoped endpoints.
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+        self.public_patterns = [re.compile(p) for p in PUBLIC_PATHS]
+
+    def __call__(self, request):
+        request.workspace = None
+
+        # Skip workspace resolution for public paths
+        if self._is_public(request.path):
+            return self.get_response(request)
+
+        # Strategy 1: Header
+        workspace_slug = request.headers.get("X-Workspace", "").strip()
+
+        # Strategy 2: Subdomain fallback
+        if not workspace_slug:
+            workspace_slug = self._extract_subdomain(request)
+
+        if not workspace_slug:
+            return JsonResponse(
+                {"detail": "Workspace context required. Provide X-Workspace header."},
+                status=400,
+            )
+
+        try:
+            workspace = Workspace.objects.get(slug=workspace_slug, is_active=True)
+        except Workspace.DoesNotExist:
+            return JsonResponse(
+                {"detail": f"Workspace '{workspace_slug}' not found or inactive."},
+                status=404,
+            )
+
+        request.workspace = workspace
+        return self.get_response(request)
+
+    def _is_public(self, path):
+        return any(pattern.match(path) for pattern in self.public_patterns)
+
+    def _extract_subdomain(self, request):
+        """Extract workspace slug from subdomain (e.g., acme.terratrail.io → acme)."""
+        host = request.get_host().split(":")[0]
+        parts = host.split(".")
+        if len(parts) >= 3:
+            return parts[0]
+        return None
