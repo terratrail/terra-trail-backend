@@ -209,3 +209,5 @@ __marimo__/
 api_docs.md
 .cursor/
 logs/*.log
+onboarding_flow.md
+.cursorignore

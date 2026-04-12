@@ -8,6 +8,7 @@ from datetime import timedelta
 
 from django.conf import settings
 from django.contrib.auth import authenticate
+from django.db import transaction
 from django.utils import timezone
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -218,15 +219,34 @@ class WorkspaceService:
     """Handles workspace-related business logic."""
 
     @staticmethod
+    @transaction.atomic
     def create_workspace(user, name, **kwargs):
-        """Create a workspace and assign user as OWNER."""
+        """
+        Create a workspace, assign user as OWNER, 
+        initialize settings, and log activity.
+        """
         workspace = Workspace.objects.create(name=name, **kwargs)
+        
+        # Assign Owner
         WorkspaceMembership.objects.create(
             user=user,
             workspace=workspace,
             role=WorkspaceMembership.Role.OWNER,
             is_active=True,
         )
+
+        # Initialize Default Settings
+        from core.models import WorkspaceSettings, WorkspaceActivity
+        WorkspaceSettings.objects.create(workspace=workspace)
+
+        # Log Activity
+        WorkspaceActivity.objects.create(
+            workspace=workspace,
+            actor=user,
+            action_text=f"created workspace '{name}'",
+            category="Workspace"
+        )
+        
         return workspace
 
     @staticmethod

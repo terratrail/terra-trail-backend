@@ -23,6 +23,7 @@ PUBLIC_PATHS = [
     r"^/swagger",
     r"^/static/",
     r"^/media/",
+    r"^/$",
 ]
 
 
@@ -51,7 +52,7 @@ class WorkspaceMiddleware:
 
         if not workspace_slug:
             return JsonResponse(
-                {"detail": "Workspace context required. Provide X-Workspace header."},
+                {"message": "Workspace context required. Provide X-Workspace header."},
                 status=400,
             )
 
@@ -59,7 +60,7 @@ class WorkspaceMiddleware:
             workspace = Workspace.objects.get(slug=workspace_slug, is_active=True)
         except Workspace.DoesNotExist:
             return JsonResponse(
-                {"detail": f"Workspace '{workspace_slug}' not found or inactive."},
+                {"message": f"Workspace '{workspace_slug}' not found or inactive."},
                 status=404,
             )
 
@@ -70,9 +71,16 @@ class WorkspaceMiddleware:
         return any(pattern.match(path) for pattern in self.public_patterns)
 
     def _extract_subdomain(self, request):
-        """Extract workspace slug from subdomain (e.g., acme.terratrail.io → acme)."""
-        host = request.get_host().split(":")[0]
+        """Extract workspace slug from subdomain."""
+        host = request.get_host().split(":")[0].lower()
         parts = host.split(".")
+        
+        # Handle acme.localhost
+        if len(parts) == 2 and parts[1] == "localhost":
+            return parts[0]
+            
+        # Handle acme.terratrail.io
         if len(parts) >= 3:
             return parts[0]
+            
         return None

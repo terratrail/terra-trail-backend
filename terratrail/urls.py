@@ -35,7 +35,10 @@ schema_view = get_schema_view(
     permission_classes=[permissions.AllowAny],
 )
 
+from core.views import WorkspaceHomeView
+
 urlpatterns = [
+    path("", WorkspaceHomeView.as_view(), name="home"),
     path("admin/", admin.site.urls),
     path("api/v1/auth/", include("accounts.urls")),
     path("api/v1/workspaces/", include("core.urls")),

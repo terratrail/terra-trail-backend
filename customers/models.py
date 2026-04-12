@@ -48,6 +48,13 @@ class Customer(WorkspaceScopedModel):
         max_length=50, blank=True, default="",
         help_text="Sales rep referral code, if applicable",
     )
+    assigned_rep = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="managed_customers",
+    )
 
     class Meta:
         indexes = [
@@ -107,6 +114,13 @@ class Subscription(WorkspaceScopedModel):
     start_date = models.DateField(null=True, blank=True)
     estimated_end_date = models.DateField(null=True, blank=True)
     notes = models.TextField(blank=True, default="")
+    assigned_rep = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="managed_subscriptions",
+    )
 
     class Meta:
         indexes = [
