@@ -17,7 +17,10 @@ from django.utils import timezone
 
 from core.utils import generate_reference
 from customers.models import Installment, Subscription
+import logging
 from payments.models import Payment
+
+logger = logging.getLogger("terratrail")
 
 
 class PaymentService:
@@ -53,6 +56,7 @@ class PaymentService:
         installment.status = Installment.Status.PENDING
         installment.save(update_fields=["status", "updated_at"])
 
+        logger.info(f"Payment recorded: {payment.transaction_reference} for installment {installment.id}")
         return payment
 
     @staticmethod
@@ -110,6 +114,7 @@ class PaymentService:
         except ImportError:
             pass
 
+        logger.info(f"Payment approved: {payment.transaction_reference}")
         return payment
 
     @staticmethod
@@ -142,6 +147,7 @@ class PaymentService:
         except ImportError:
             pass
 
+        logger.info(f"Payment rejected: {payment.transaction_reference}. Reason: {reason}")
         return payment
 
     @staticmethod

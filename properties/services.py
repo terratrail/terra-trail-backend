@@ -2,7 +2,10 @@
 Properties services — Business logic for property management.
 """
 
+import logging
 from properties.models import PricingPlan, Property
+
+logger = logging.getLogger("terratrail")
 
 
 class PropertyService:
@@ -17,6 +20,7 @@ class PropertyService:
             raise ValueError("Property must have at least one active pricing plan.")
         property_obj.status = Property.Status.PUBLISHED
         property_obj.save(update_fields=["status", "updated_at"])
+        logger.info(f"Property published: {property_obj.name} (UUID: {property_obj.id})")
         return property_obj
 
     @staticmethod
@@ -24,6 +28,7 @@ class PropertyService:
         """Unpublish a property."""
         property_obj.status = Property.Status.DRAFT
         property_obj.save(update_fields=["status", "updated_at"])
+        logger.info(f"Property unpublished: {property_obj.name} (UUID: {property_obj.id})")
         return property_obj
 
 
@@ -35,6 +40,7 @@ class PricingPlanService:
         """Activate a pricing plan."""
         plan.is_active = True
         plan.save(update_fields=["is_active", "updated_at"])
+        logger.info(f"Pricing plan activated: {plan.name} for property {plan.property.name}")
         return plan
 
     @staticmethod

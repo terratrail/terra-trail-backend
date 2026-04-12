@@ -98,7 +98,9 @@ class CommissionMarkPaidView(APIView):
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
             properties={
-                "notes": openapi.Schema(type=openapi.TYPE_STRING, description="Payout notes"),
+                "notes": openapi.Schema(
+                    type=openapi.TYPE_STRING, description="Payout notes"
+                ),
             },
         ),
         responses={200: CommissionSerializer},
@@ -106,12 +108,10 @@ class CommissionMarkPaidView(APIView):
     )
     def post(self, request, id):
         try:
-            commission = Commission.objects.get(
-                id=id, workspace=request.workspace
-            )
+            commission = Commission.objects.get(id=id, workspace=request.workspace)
         except Commission.DoesNotExist:
             return Response(
-                {"detail": "Commission not found."},
+                {"message": "Commission not found."},
                 status=status.HTTP_404_NOT_FOUND,
             )
 
@@ -120,6 +120,6 @@ class CommissionMarkPaidView(APIView):
         try:
             commission = CommissionService.mark_as_paid(commission, notes)
         except ValueError as e:
-            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response(CommissionSerializer(commission).data)

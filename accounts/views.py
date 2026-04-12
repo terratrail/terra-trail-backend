@@ -10,7 +10,10 @@ from rest_framework_simplejwt.views import TokenRefreshView
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
+import logging
 from accounts.models import User, WorkspaceMembership
+
+logger = logging.getLogger("terratrail")
 from accounts.serializers import (
     AddMemberSerializer,
     LoginSerializer,
@@ -44,13 +47,17 @@ class RegisterView(APIView):
 
         try:
             user, tokens = AuthService.register_user(**serializer.validated_data)
+            logger.info(f"New user registered: {user.email}")
         except ValueError as e:
-            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            logger.warning(
+                f"Registration failed for {serializer.initial_data.get('email')}: {e}"
+            )
+            return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response(
             {
+                "message": "Account created. Please verify your email using the OTP sent to you.",
                 "user": UserSerializer(user).data,
-                "tokens": tokens,
             },
             status=status.HTTP_201_CREATED,
         )
@@ -76,8 +83,12 @@ class LoginView(APIView):
 
         try:
             user, tokens = AuthService.login_user(**serializer.validated_data)
+            logger.info(f"User logged in: {user.email}")
         except ValueError as e:
-            return Response({"detail": str(e)}, status=status.HTTP_401_UNAUTHORIZED)
+            logger.warning(
+                f"Login attempt failed for {serializer.initial_data.get('email')}: {e}"
+            )
+            return Response({"message": str(e)}, status=status.HTTP_401_UNAUTHORIZED)
 
         return Response(
             {
@@ -122,13 +133,16 @@ class OTPRequestView(APIView):
         try:
             code = OTPService.request_otp(**serializer.validated_data)
         except ValueError as e:
-            return Response({"detail": str(e)}, status=status.HTTP_429_TOO_MANY_REQUESTS)
+            return Response(
+                {"message": str(e)}, status=status.HTTP_429_TOO_MANY_REQUESTS
+            )
 
         # In production, send via email/SMS — never return code in response
-        response_data = {"detail": "OTP sent successfully."}
+        response_data = {"message": "OTP sent successfully."}
 
         # In development, include the code for testing
         from django.conf import settings
+
         if settings.DEBUG:
             response_data["code"] = code
 
@@ -156,7 +170,7 @@ class OTPVerifyView(APIView):
         try:
             user, tokens = OTPService.verify_otp(**serializer.validated_data)
         except ValueError as e:
-            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response(
             {
@@ -209,7 +223,7 @@ class AddMemberView(APIView):
             user = User.objects.get(email=email)
         except User.DoesNotExist:
             return Response(
-                {"detail": f"No user found with email '{email}'."},
+                {"message": f"No user found with email '{email}'."},
                 status=status.HTTP_404_NOT_FOUND,
             )
 

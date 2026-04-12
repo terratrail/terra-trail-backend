@@ -80,14 +80,16 @@ class PropertyPublishView(APIView):
         try:
             prop = Property.objects.get(id=id, workspace=request.workspace)
         except Property.DoesNotExist:
-            return Response({"detail": "Property not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"message": "Property not found."}, status=status.HTTP_404_NOT_FOUND
+            )
 
         try:
             PropertyService.publish(prop)
         except ValueError as e:
-            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-        return Response({"detail": "Property published.", "status": prop.status})
+        return Response({"message": "Property published.", "status": prop.status})
 
 
 class PropertyUnpublishView(APIView):
@@ -99,10 +101,12 @@ class PropertyUnpublishView(APIView):
         try:
             prop = Property.objects.get(id=id, workspace=request.workspace)
         except Property.DoesNotExist:
-            return Response({"detail": "Property not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"message": "Property not found."}, status=status.HTTP_404_NOT_FOUND
+            )
 
         PropertyService.unpublish(prop)
-        return Response({"detail": "Property unpublished.", "status": prop.status})
+        return Response({"message": "Property unpublished.", "status": prop.status})
 
 
 # ---------------------------------------------------------------------------
@@ -154,10 +158,12 @@ class PricingPlanActivateView(APIView):
         try:
             plan = PricingPlan.objects.get(id=id, workspace=request.workspace)
         except PricingPlan.DoesNotExist:
-            return Response({"detail": "Plan not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"message": "Plan not found."}, status=status.HTTP_404_NOT_FOUND
+            )
 
         PricingPlanService.activate(plan)
-        return Response({"detail": "Plan activated."})
+        return Response({"message": "Plan activated."})
 
 
 class PricingPlanDeactivateView(APIView):
@@ -169,10 +175,12 @@ class PricingPlanDeactivateView(APIView):
         try:
             plan = PricingPlan.objects.get(id=id, workspace=request.workspace)
         except PricingPlan.DoesNotExist:
-            return Response({"detail": "Plan not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"message": "Plan not found."}, status=status.HTTP_404_NOT_FOUND
+            )
 
         PricingPlanService.deactivate(plan)
-        return Response({"detail": "Plan deactivated."})
+        return Response({"message": "Plan deactivated."})
 
 
 # ---------------------------------------------------------------------------

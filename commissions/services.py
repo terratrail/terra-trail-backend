@@ -7,8 +7,11 @@ from decimal import Decimal
 
 from django.db import transaction
 
+import logging
 from commissions.models import Commission, SalesRep
 from core.utils import round_currency
+
+logger = logging.getLogger("terratrail")
 
 
 class CommissionService:
@@ -56,6 +59,7 @@ class CommissionService:
             status=Commission.Status.PENDING,
         )
 
+        logger.info(f"Commission generated: {commission_amount} for Sales Rep {sales_rep.name} (Payment: {payment.transaction_reference})")
         return commission
 
     @staticmethod
@@ -84,6 +88,8 @@ class CommissionService:
         commission.paid_date = date.today()
         commission.notes = notes
         commission.save(update_fields=["status", "paid_date", "notes", "updated_at"])
+        
+        logger.info(f"Commission marked as PAID: ID {commission.id} to Sales Rep {commission.sales_rep.name}")
         return commission
 
     @staticmethod

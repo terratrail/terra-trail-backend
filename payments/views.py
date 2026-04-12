@@ -51,9 +51,7 @@ class PaymentDetailView(generics.RetrieveAPIView):
     lookup_field = "id"
 
     def get_queryset(self):
-        return Payment.objects.filter(
-            workspace=self.request.workspace
-        ).select_related(
+        return Payment.objects.filter(workspace=self.request.workspace).select_related(
             "installment__subscription__customer",
             "recorded_by",
             "approved_by",
@@ -86,7 +84,7 @@ class RecordPaymentView(APIView):
             )
         except Installment.DoesNotExist:
             return Response(
-                {"detail": "Installment not found."},
+                {"message": "Installment not found."},
                 status=status.HTTP_404_NOT_FOUND,
             )
 
@@ -101,7 +99,7 @@ class RecordPaymentView(APIView):
                 notes=data.get("notes", ""),
             )
         except ValueError as e:
-            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response(
             PaymentSerializer(payment).data,
@@ -123,14 +121,14 @@ class ApprovePaymentView(APIView):
             payment = Payment.objects.get(id=id, workspace=request.workspace)
         except Payment.DoesNotExist:
             return Response(
-                {"detail": "Payment not found."},
+                {"message": "Payment not found."},
                 status=status.HTTP_404_NOT_FOUND,
             )
 
         try:
             payment = PaymentService.approve_payment(payment, approved_by=request.user)
         except ValueError as e:
-            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response(PaymentSerializer(payment).data)
 
@@ -152,7 +150,7 @@ class RejectPaymentView(APIView):
             payment = Payment.objects.get(id=id, workspace=request.workspace)
         except Payment.DoesNotExist:
             return Response(
-                {"detail": "Payment not found."},
+                {"message": "Payment not found."},
                 status=status.HTTP_404_NOT_FOUND,
             )
 
@@ -161,6 +159,6 @@ class RejectPaymentView(APIView):
                 payment, reason=serializer.validated_data.get("reason", "")
             )
         except ValueError as e:
-            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response(PaymentSerializer(payment).data)

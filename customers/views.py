@@ -44,9 +44,9 @@ class CustomerListCreateView(generics.ListCreateAPIView):
         return CustomerSerializer
 
     def get_queryset(self):
-        return Customer.objects.filter(
-            workspace=self.request.workspace
-        ).order_by("-created_at")
+        return Customer.objects.filter(workspace=self.request.workspace).order_by(
+            "-created_at"
+        )
 
     @swagger_auto_schema(
         request_body=CustomerCreateSerializer,
@@ -62,9 +62,7 @@ class CustomerListCreateView(generics.ListCreateAPIView):
         pricing_plan_id = data.pop("pricing_plan_id", None)
 
         # Create customer
-        customer = Customer.objects.create(
-            workspace=request.workspace, **data
-        )
+        customer = Customer.objects.create(workspace=request.workspace, **data)
 
         response_data = CustomerSerializer(customer).data
 
@@ -85,10 +83,15 @@ class CustomerListCreateView(generics.ListCreateAPIView):
                     property_obj=property_obj,
                     pricing_plan=pricing_plan,
                 )
-                response_data["subscription"] = SubscriptionSerializer(subscription).data
+                response_data["subscription"] = SubscriptionSerializer(
+                    subscription
+                ).data
             except (Property.DoesNotExist, PricingPlan.DoesNotExist) as e:
                 return Response(
-                    {"detail": "Invalid property or pricing plan.", "customer": response_data},
+                    {
+                        "message": "Invalid property or pricing plan.",
+                        "customer": response_data,
+                    },
                     status=status.HTTP_201_CREATED,
                 )
 
@@ -164,9 +167,15 @@ class SubscriptionCreateView(APIView):
             type=openapi.TYPE_OBJECT,
             required=["customer_id", "property_id", "pricing_plan_id"],
             properties={
-                "customer_id": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID),
-                "property_id": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID),
-                "pricing_plan_id": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID),
+                "customer_id": openapi.Schema(
+                    type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID
+                ),
+                "property_id": openapi.Schema(
+                    type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID
+                ),
+                "pricing_plan_id": openapi.Schema(
+                    type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID
+                ),
                 "notes": openapi.Schema(type=openapi.TYPE_STRING),
             },
         ),
@@ -181,19 +190,23 @@ class SubscriptionCreateView(APIView):
 
         if not all([customer_id, property_id, pricing_plan_id]):
             return Response(
-                {"detail": "customer_id, property_id, and pricing_plan_id are required."},
+                {
+                    "message": "customer_id, property_id, and pricing_plan_id are required."
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
         try:
             customer = Customer.objects.get(id=customer_id, workspace=request.workspace)
-            property_obj = Property.objects.get(id=property_id, workspace=request.workspace)
+            property_obj = Property.objects.get(
+                id=property_id, workspace=request.workspace
+            )
             pricing_plan = PricingPlan.objects.get(
                 id=pricing_plan_id, workspace=request.workspace, is_active=True
             )
         except (Customer.DoesNotExist, Property.DoesNotExist, PricingPlan.DoesNotExist):
             return Response(
-                {"detail": "Invalid customer, property, or pricing plan."},
+                {"message": "Invalid customer, property, or pricing plan."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 

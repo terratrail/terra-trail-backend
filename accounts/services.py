@@ -20,7 +20,7 @@ class AuthService:
     """Handles user registration and JWT login."""
 
     @staticmethod
-    def register_user(email, password, first_name="", last_name="", phone=""):
+    def register_user(email, password, **extra_fields):
         """
         Register a new user.
 
@@ -33,30 +33,44 @@ class AuthService:
         user = User.objects.create_user(
             email=email,
             password=password,
-            first_name=first_name,
-            last_name=last_name,
-            phone=phone,
+            is_active=False,  # Require OTP verification
+            **extra_fields,
         )
 
-        tokens = AuthService._generate_tokens(user)
-        return user, tokens
+        # Trigger OTP for verification
+        code = OTPService.request_otp(email=user.email, phone=user.phone)
+        
+        # In a real environment, we'd call an email task here.
+        # For now, it will log to console via the email backend.
+        from notifications.services import NotificationService
+        NotificationService.send_email(
+            workspace=None, # System level
+            recipient=user.email,
+            subject="Verify your TerraTrail Account",
+            message=f"Your verification code is {code}. It expires in 10 minutes."
+        )
+
+        return user, None  # No tokens until verified
 
     @staticmethod
     def login_user(email, password):
         """
         Authenticate and return JWT tokens.
-
-        Returns:
-            tuple: (user, tokens_dict)
-
-        Raises:
-            ValueError: If credentials are invalid.
         """
         user = authenticate(email=email, password=password)
+        
         if not user:
+            # Check if user exists but is inactive
+            try:
+                temp_user = User.objects.get(email=email)
+                if not temp_user.is_active:
+                    raise ValueError("Your account is not verified. Please verify your email via OTP.")
+                if not temp_user.check_password(password):
+                    raise ValueError("Invalid email or password.")
+            except User.DoesNotExist:
+                raise ValueError("Invalid email or password.")
+            
             raise ValueError("Invalid email or password.")
-        if not user.is_active:
-            raise ValueError("Account is deactivated.")
 
         tokens = AuthService._generate_tokens(user)
         return user, tokens
@@ -75,19 +89,27 @@ class OTPService:
     """Handles OTP generation, validation, and lockout for customer portal."""
 
     @staticmethod
-    def request_otp(email, phone):
+    def request_otp(email="", phone=""):
         """
         Generate and store a new OTP.
 
-        Validates that email + phone match a known customer before issuing.
+        Validates that email OR phone is provided.
         Returns the OTP code (for sending via email/SMS).
         """
-        # Check for existing lockout
+        if not email and not phone:
+            raise ValueError("Email or phone is required.")
+
+        # Check for existing lockout across both identifiers if both provided
+        from django.db.models import Q
         recent_otp = (
-            OTPToken.objects.filter(email=email, is_used=False)
+            OTPToken.objects.filter(
+                Q(email=email, email__gt="") | Q(phone=phone, phone__gt=""),
+                is_used=False
+            )
             .order_by("-created_at")
             .first()
         )
+        
         if recent_otp and recent_otp.is_locked:
             remaining = (recent_otp.locked_until - timezone.now()).seconds // 60
             raise ValueError(
@@ -105,18 +127,45 @@ class OTPService:
             expires_at=expiry,
         )
 
+        # Trigger notification based on available contact method
+        from notifications.services import NotificationService
+        if email:
+            NotificationService.send_email(
+                workspace=None,
+                recipient=email,
+                subject="Your OTP Code",
+                message=f"Your OTP code is {code}. It expires in 10 minutes."
+            )
+        elif phone:
+            NotificationService.send_sms(
+                workspace=None,
+                recipient=phone,
+                message=f"Your TerraTrail OTP is {code}. Expires in 10m."
+            )
+
         return otp.code
 
     @staticmethod
-    def verify_otp(email, code):
+    def verify_otp(code, email="", phone=""):
         """
         Verify an OTP code.
 
         Returns:
             User if valid, raises ValueError otherwise.
         """
+        from django.db.models import Q
+        if not email and not phone:
+            raise ValueError("Email or phone is required for verification.")
+
+        # Filter by whichever identifier is provided
+        lookup = Q(is_used=False)
+        if email:
+            lookup &= Q(email=email)
+        elif phone:
+            lookup &= Q(phone=phone)
+
         otp = (
-            OTPToken.objects.filter(email=email, is_used=False)
+            OTPToken.objects.filter(lookup)
             .order_by("-created_at")
             .first()
         )
@@ -146,9 +195,19 @@ class OTPService:
         otp.is_used = True
         otp.save()
 
-        # Return or create session token
+        # Activate user if they were inactive
         try:
-            user = User.objects.get(email=email)
+            lookup = Q()
+            if email:
+                lookup = Q(email=email)
+            elif phone:
+                lookup = Q(phone=phone)
+                
+            user = User.objects.get(lookup)
+            if not user.is_active:
+                user.is_active = True
+                user.save(update_fields=["is_active", "updated_at"])
+            
             tokens = AuthService._generate_tokens(user)
             return user, tokens
         except User.DoesNotExist:

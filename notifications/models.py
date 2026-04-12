@@ -15,6 +15,14 @@ class NotificationLog(WorkspaceScopedModel):
     Captures type, recipient, content, and delivery status.
     """
 
+    # Allow null workspace for system-level notifications (e.g. signup OTP)
+    workspace = models.ForeignKey(
+        "core.Workspace",
+        on_delete=models.CASCADE,
+        related_name="%(class)s_set",
+        null=True, blank=True,
+    )
+
     class NotificationType(models.TextChoices):
         EMAIL = "EMAIL", "Email"
         SMS = "SMS", "SMS"

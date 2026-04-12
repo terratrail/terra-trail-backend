@@ -16,7 +16,9 @@ class UserSerializer(serializers.ModelSerializer):
         fields = [
             "id", "email", "phone", "first_name", "last_name",
             "full_name", "default_role", "is_active",
-            "date_joined",
+            "title", "gender", "date_of_birth", "occupation",
+            "marital_status", "address", "country", "state",
+            "nationality", "date_joined",
         ]
         read_only_fields = ["id", "date_joined"]
 
@@ -29,6 +31,15 @@ class RegisterSerializer(serializers.Serializer):
     first_name = serializers.CharField(max_length=150, required=False, default="")
     last_name = serializers.CharField(max_length=150, required=False, default="")
     phone = serializers.CharField(max_length=20, required=False, default="")
+    title = serializers.CharField(max_length=10, required=False, default="")
+    gender = serializers.CharField(max_length=10, required=False, default="")
+    date_of_birth = serializers.DateField(required=False, allow_null=True)
+    occupation = serializers.CharField(max_length=255, required=False, default="")
+    marital_status = serializers.CharField(max_length=20, required=False, default="")
+    address = serializers.CharField(required=False, default="")
+    country = serializers.CharField(max_length=100, required=False, default="Nigeria")
+    state = serializers.CharField(max_length=100, required=False, default="")
+    nationality = serializers.CharField(max_length=100, required=False, default="")
 
 
 class LoginSerializer(serializers.Serializer):
@@ -41,15 +52,26 @@ class LoginSerializer(serializers.Serializer):
 class OTPRequestSerializer(serializers.Serializer):
     """OTP request input — customer portal."""
 
-    email = serializers.EmailField()
-    phone = serializers.CharField(max_length=20)
+    email = serializers.EmailField(required=False, allow_blank=True)
+    phone = serializers.CharField(max_length=20, required=False, allow_blank=True)
+
+    def validate(self, data):
+        if not data.get("email") and not data.get("phone"):
+            raise serializers.ValidationError("Either email or phone is required.")
+        return data
 
 
 class OTPVerifySerializer(serializers.Serializer):
     """OTP verification input."""
 
-    email = serializers.EmailField()
+    email = serializers.EmailField(required=False, allow_blank=True)
+    phone = serializers.CharField(max_length=20, required=False, allow_blank=True)
     code = serializers.CharField(max_length=6, min_length=6)
+
+    def validate(self, data):
+        if not data.get("email") and not data.get("phone"):
+            raise serializers.ValidationError("Either email or phone is required for verification.")
+        return data
 
 
 class WorkspaceMembershipSerializer(serializers.ModelSerializer):

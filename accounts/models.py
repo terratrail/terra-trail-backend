@@ -50,10 +50,45 @@ class User(AbstractUser):
         CUSTOMER = "CUSTOMER", "Customer"
         SALES_REP = "SALES_REP", "Sales Rep"
 
+    class Title(models.TextChoices):
+        MR = "MR", "Mr."
+        MRS = "MRS", "Mrs."
+        MS = "MS", "Ms."
+        DR = "DR", "Dr."
+        CHIEF = "CHIEF", "Chief"
+        PASTOR = "PASTOR", "Pastor"
+
+    class Gender(models.TextChoices):
+        MALE = "MALE", "Male"
+        FEMALE = "FEMALE", "Female"
+        OTHER = "OTHER", "Other"
+
+    class MaritalStatus(models.TextChoices):
+        SINGLE = "SINGLE", "Single"
+        MARRIED = "MARRIED", "Married"
+        DIVORCED = "DIVORCED", "Divorced"
+        WIDOWED = "WIDOWED", "Widowed"
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     username = None  # Remove username field
     email = models.EmailField(unique=True, db_index=True)
     phone = models.CharField(max_length=20, blank=True, default="")
+    title = models.CharField(
+        max_length=10, choices=Title.choices, blank=True, default=""
+    )
+    gender = models.CharField(
+        max_length=10, choices=Gender.choices, blank=True, default=""
+    )
+    date_of_birth = models.DateField(null=True, blank=True)
+    occupation = models.CharField(max_length=255, blank=True, default="")
+    marital_status = models.CharField(
+        max_length=20, choices=MaritalStatus.choices, blank=True, default=""
+    )
+    address = models.TextField(blank=True, default="")
+    country = models.CharField(max_length=100, blank=True, default="Nigeria")
+    state = models.CharField(max_length=100, blank=True, default="")
+    nationality = models.CharField(max_length=100, blank=True, default="")
+
     default_role = models.CharField(
         max_length=20,
         choices=Role.choices,
@@ -61,6 +96,7 @@ class User(AbstractUser):
     )
     first_name = models.CharField(max_length=150, blank=True, default="")
     last_name = models.CharField(max_length=150, blank=True, default="")
+    updated_at = models.DateTimeField(auto_now=True)
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []
@@ -132,8 +168,8 @@ class OTPToken(TimeStampedModel):
     - Lockout after max attempts for OTP_LOCKOUT_MINUTES (default 15)
     """
 
-    email = models.EmailField(db_index=True)
-    phone = models.CharField(max_length=20)
+    email = models.EmailField(db_index=True, blank=True, default="")
+    phone = models.CharField(max_length=20, db_index=True, blank=True, default="")
     code = models.CharField(max_length=6)
     attempts = models.PositiveIntegerField(default=0)
     is_used = models.BooleanField(default=False)
@@ -143,6 +179,7 @@ class OTPToken(TimeStampedModel):
     class Meta:
         indexes = [
             models.Index(fields=["email", "is_used"]),
+            models.Index(fields=["phone", "is_used"]),
         ]
 
     def __str__(self):
