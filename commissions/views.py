@@ -10,6 +10,7 @@ from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
 from core.permissions import IsWorkspaceAdmin, IsWorkspaceAdminOrReadOnly
+from core.plan_guard import PlanGuard, PlanLimitExceeded
 from commissions.models import Commission, SalesRep
 from commissions.serializers import (
     CommissionSerializer,
@@ -45,6 +46,11 @@ class SalesRepListCreateView(generics.ListCreateAPIView):
         )
 
     def perform_create(self, serializer):
+        try:
+            PlanGuard.check_sales_rep_limit(self.request.workspace)
+        except PlanLimitExceeded as e:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied(str(e))
         serializer.save(workspace=self.request.workspace)
 
 

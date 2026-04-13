@@ -11,6 +11,7 @@ from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
 from core.permissions import IsWorkspaceAdmin, IsWorkspaceAdminOrReadOnly
+from core.plan_guard import PlanGuard, PlanLimitExceeded
 from properties.models import BankAccount, PricingPlan, Property
 from properties.serializers import (
     BankAccountSerializer,
@@ -48,6 +49,14 @@ class PropertyListCreateView(generics.ListCreateAPIView):
             .annotate(pricing_plans_count=Count("pricing_plans"))
             .order_by("-created_at")
         )
+
+    def perform_create(self, serializer):
+        try:
+            PlanGuard.check_property_limit(self.request.workspace)
+        except PlanLimitExceeded as e:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied(str(e))
+        serializer.save(workspace=self.request.workspace)
 
 
 class PropertyDetailView(generics.RetrieveUpdateDestroyAPIView):

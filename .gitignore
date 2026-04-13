@@ -211,3 +211,5 @@ api_docs.md
 logs/*.log
 onboarding_flow.md
 .cursorignore
+.claude/
+.claudeignore

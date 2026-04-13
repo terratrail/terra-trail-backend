@@ -40,15 +40,16 @@ class AuthService:
 
         # Trigger OTP for verification
         code = OTPService.request_otp(email=user.email, phone=user.phone)
-        
+
         # In a real environment, we'd call an email task here.
         # For now, it will log to console via the email backend.
         from notifications.services import NotificationService
+
         NotificationService.send_email(
-            workspace=None, # System level
+            workspace=None,  # System level
             recipient=user.email,
             subject="Verify your TerraTrail Account",
-            message=f"Your verification code is {code}. It expires in 10 minutes."
+            message=f"Your verification code is {code}. It expires in 10 minutes.",
         )
 
         return user, None  # No tokens until verified
@@ -59,21 +60,26 @@ class AuthService:
         Authenticate and return JWT tokens.
         """
         user = authenticate(email=email, password=password)
-        
+
         if not user:
             # Check if user exists but is inactive
             try:
                 temp_user = User.objects.get(email=email)
                 if not temp_user.is_active:
-                    raise ValueError("Your account is not verified. Please verify your email via OTP.")
+                    raise ValueError(
+                        "Your account is not verified. Please verify your email via OTP."
+                    )
                 if not temp_user.check_password(password):
                     raise ValueError("Invalid email or password.")
             except User.DoesNotExist:
                 raise ValueError("Invalid email or password.")
-            
+
             raise ValueError("Invalid email or password.")
 
         tokens = AuthService._generate_tokens(user)
+        user.last_login = timezone.now()
+        user.save(update_fields=["last_login"])
+
         return user, tokens
 
     @staticmethod
@@ -102,20 +108,19 @@ class OTPService:
 
         # Check for existing lockout across both identifiers if both provided
         from django.db.models import Q
+
         recent_otp = (
             OTPToken.objects.filter(
                 Q(email=email, email__gt="") | Q(phone=phone, phone__gt=""),
-                is_used=False
+                is_used=False,
             )
             .order_by("-created_at")
             .first()
         )
-        
+
         if recent_otp and recent_otp.is_locked:
             remaining = (recent_otp.locked_until - timezone.now()).seconds // 60
-            raise ValueError(
-                f"Account locked. Try again in {remaining + 1} minutes."
-            )
+            raise ValueError(f"Account locked. Try again in {remaining + 1} minutes.")
 
         # Generate new OTP
         code = generate_otp()
@@ -130,18 +135,19 @@ class OTPService:
 
         # Trigger notification based on available contact method
         from notifications.services import NotificationService
+
         if email:
             NotificationService.send_email(
                 workspace=None,
                 recipient=email,
                 subject="Your OTP Code",
-                message=f"Your OTP code is {code}. It expires in 10 minutes."
+                message=f"Your OTP code is {code}. It expires in 10 minutes.",
             )
         elif phone:
             NotificationService.send_sms(
                 workspace=None,
                 recipient=phone,
-                message=f"Your TerraTrail OTP is {code}. Expires in 10m."
+                message=f"Your TerraTrail OTP is {code}. Expires in 10m.",
             )
 
         return otp.code
@@ -155,6 +161,7 @@ class OTPService:
             User if valid, raises ValueError otherwise.
         """
         from django.db.models import Q
+
         if not email and not phone:
             raise ValueError("Email or phone is required for verification.")
 
@@ -165,11 +172,7 @@ class OTPService:
         elif phone:
             lookup &= Q(phone=phone)
 
-        otp = (
-            OTPToken.objects.filter(lookup)
-            .order_by("-created_at")
-            .first()
-        )
+        otp = OTPToken.objects.filter(lookup).order_by("-created_at").first()
 
         if not otp:
             raise ValueError("No pending OTP found. Request a new one.")
@@ -188,9 +191,7 @@ class OTPService:
                 )
             otp.save()
             remaining = settings.OTP_MAX_ATTEMPTS - otp.attempts
-            raise ValueError(
-                f"Invalid OTP. {remaining} attempt(s) remaining."
-            )
+            raise ValueError(f"Invalid OTP. {remaining} attempt(s) remaining.")
 
         # Mark OTP as used
         otp.is_used = True
@@ -203,12 +204,12 @@ class OTPService:
                 lookup = Q(email=email)
             elif phone:
                 lookup = Q(phone=phone)
-                
+
             user = User.objects.get(lookup)
             if not user.is_active:
                 user.is_active = True
                 user.save(update_fields=["is_active", "updated_at"])
-            
+
             tokens = AuthService._generate_tokens(user)
             return user, tokens
         except User.DoesNotExist:
@@ -222,11 +223,11 @@ class WorkspaceService:
     @transaction.atomic
     def create_workspace(user, name, **kwargs):
         """
-        Create a workspace, assign user as OWNER, 
+        Create a workspace, assign user as OWNER,
         initialize settings, and log activity.
         """
         workspace = Workspace.objects.create(name=name, **kwargs)
-        
+
         # Assign Owner
         WorkspaceMembership.objects.create(
             user=user,
@@ -237,6 +238,7 @@ class WorkspaceService:
 
         # Initialize Default Settings
         from core.models import WorkspaceSettings, WorkspaceActivity
+
         WorkspaceSettings.objects.create(workspace=workspace)
 
         # Log Activity
@@ -244,14 +246,24 @@ class WorkspaceService:
             workspace=workspace,
             actor=user,
             action_text=f"created workspace '{name}'",
-            category="Workspace"
+            category="Workspace",
         )
-        
+
         return workspace
 
     @staticmethod
     def add_member(workspace, user, role="ADMIN"):
         """Add a user to a workspace with a specified role."""
+        # Only check the limit when adding a genuinely new active member.
+        # Re-activating or updating an existing membership doesn't consume a slot.
+        already_member = WorkspaceMembership.objects.filter(
+            user=user, workspace=workspace, is_active=True
+        ).exists()
+        if not already_member:
+            from core.plan_guard import PlanGuard, PlanLimitExceeded
+
+            PlanGuard.check_team_member_limit(workspace)
+
         membership, created = WorkspaceMembership.objects.get_or_create(
             user=user,
             workspace=workspace,

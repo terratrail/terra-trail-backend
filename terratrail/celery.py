@@ -28,4 +28,8 @@ app.conf.beat_schedule = {
         "task": "customers.tasks.mark_overdue_installments",
         "schedule": crontab(hour=0, minute=30),  # Daily at 12:30 AM UTC
     },
+    "purge-expired-invitations": {
+        "task": "core.tasks.purge_expired_invitations",
+        "schedule": crontab(hour=2, minute=0),  # Daily at 2 AM UTC
+    },
 }

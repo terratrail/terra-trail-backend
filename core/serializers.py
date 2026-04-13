@@ -74,3 +74,15 @@ class WorkspaceMinimalSerializer(serializers.ModelSerializer):
     class Meta:
         model = Workspace
         fields = ["id", "name", "slug", "logo", "role"]
+
+
+class SelectPlanSerializer(serializers.Serializer):
+    """
+    Input for selecting/upgrading a billing plan.
+    ENTERPRISE is excluded — it requires a direct sales conversation.
+    """
+
+    plan = serializers.ChoiceField(
+        choices=["FREE", "STARTER", "GROWTH", "SCALE"],
+        help_text="Choose a plan. For Enterprise, contact sales@terratrail.io.",
+    )

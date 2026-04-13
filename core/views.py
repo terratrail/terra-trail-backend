@@ -10,7 +10,10 @@ from drf_yasg.utils import swagger_auto_schema
 
 from accounts.models import WorkspaceMembership
 from core.models import Workspace, WorkspaceSettings, WorkspaceActivity
+from core.plan_guard import PlanGuard, PlanLimitExceeded
+from core.plans import PLAN_CATALOGUE, PAYMENT_DETAILS
 from core.serializers import (
+    SelectPlanSerializer,
     WorkspaceCreateSerializer,
     WorkspaceMinimalSerializer,
     WorkspaceSerializer,
@@ -33,7 +36,11 @@ class WorkspaceCreateView(generics.CreateAPIView):
     permission_classes = [IsAuthenticated]
 
     def perform_create(self, serializer):
-        # Use service to ensure atomic creation, settings init, and logging
+        try:
+            PlanGuard.check_workspace_limit(self.request.user)
+        except PlanLimitExceeded as e:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied(str(e))
         workspace = WorkspaceService.create_workspace(
             user=self.request.user, **serializer.validated_data
         )
@@ -193,13 +200,96 @@ class InviteMemberView(generics.CreateAPIView):
 class WorkspaceHomeView(APIView):
     """
     GET /
-    
+
     Renders the public landing page for the workspace.
     Uses the context injected by WorkspaceMiddleware.
     """
-    
-    permission_classes = [] # Allow public access to landing page
-    
+
+    permission_classes = []  # Allow public access to landing page
+
     def get(self, request):
         from django.shortcuts import render
         return render(request, "core/landing.html", {"workspace": request.workspace})
+
+
+# ---------------------------------------------------------------------------
+# Billing / Plan endpoints
+# ---------------------------------------------------------------------------
+
+
+class PlanListView(APIView):
+    """
+    GET /api/v1/workspaces/billing/plans/
+
+    Returns the full plan catalogue with limits, pricing, and a flag
+    indicating which plan the current workspace is on.
+    Requires workspace context so the current plan can be marked.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        current_plan = request.workspace.billing_plan
+        catalogue = []
+        for plan in PLAN_CATALOGUE:
+            catalogue.append({**plan, "is_current": plan["key"] == current_plan})
+        return Response({
+            "plans": catalogue,
+            "payment_details": PAYMENT_DETAILS,
+        })
+
+
+class SelectPlanView(APIView):
+    """
+    POST /api/v1/workspaces/billing/select/
+
+    Select or upgrade the workspace billing plan.
+    During onboarding this step is optional — skipping it leaves the workspace
+    on the FREE plan.
+
+    Note: payment processing is intentionally out of scope here.
+    Wire up a payment gateway before activating paid plans in production.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(request_body=SelectPlanSerializer)
+    def post(self, request):
+        serializer = SelectPlanSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        new_plan = serializer.validated_data["plan"]
+        workspace = request.workspace
+
+        workspace.billing_plan = new_plan
+        workspace.save(update_fields=["billing_plan", "updated_at"])
+
+        WorkspaceActivity.objects.create(
+            workspace=workspace,
+            actor=request.user,
+            action_text=f"changed billing plan to {new_plan}",
+            category="Billing",
+        )
+
+        return Response(
+            {
+                "message": f"Plan updated to {new_plan}.",
+                "billing_plan": new_plan,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class PlanUsageView(APIView):
+    """
+    GET /api/v1/workspaces/billing/usage/
+
+    Returns current resource usage vs plan limits for the workspace.
+    Useful for displaying usage meters in the dashboard.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        usage = PlanGuard.get_usage(request.user, request.workspace)
+        return Response(usage)

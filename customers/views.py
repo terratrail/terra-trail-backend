@@ -10,6 +10,7 @@ from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
 from core.permissions import IsWorkspaceAdmin, IsWorkspaceAdminOrReadOnly
+from core.plan_guard import PlanGuard, PlanLimitExceeded
 from customers.models import Customer, Installment, Subscription
 from customers.serializers import (
     CustomerCreateSerializer,
@@ -60,6 +61,12 @@ class CustomerListCreateView(generics.ListCreateAPIView):
         data = serializer.validated_data
         property_id = data.pop("property_id", None)
         pricing_plan_id = data.pop("pricing_plan_id", None)
+
+        # Enforce plan limit before creating
+        try:
+            PlanGuard.check_customer_limit(request.workspace)
+        except PlanLimitExceeded as e:
+            return Response({"message": str(e)}, status=status.HTTP_402_PAYMENT_REQUIRED)
 
         # Create customer
         customer = Customer.objects.create(workspace=request.workspace, **data)

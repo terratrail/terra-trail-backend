@@ -24,6 +24,7 @@ from accounts.serializers import (
     WorkspaceMembershipSerializer,
 )
 from accounts.services import AuthService, OTPService, WorkspaceService
+from accounts.throttles import OTPRequestThrottle, OTPVerifyThrottle
 from core.permissions import IsWorkspaceAdmin
 
 
@@ -120,6 +121,7 @@ class OTPRequestView(APIView):
     """
 
     permission_classes = [AllowAny]
+    throttle_classes = [OTPRequestThrottle]
 
     @swagger_auto_schema(
         request_body=OTPRequestSerializer,
@@ -157,6 +159,7 @@ class OTPVerifyView(APIView):
     """
 
     permission_classes = [AllowAny]
+    throttle_classes = [OTPVerifyThrottle]
 
     @swagger_auto_schema(
         request_body=OTPVerifySerializer,

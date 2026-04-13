@@ -100,19 +100,32 @@ class PaymentService:
         # 4. Activate next installment
         PaymentService._activate_next_installment(subscription)
 
-        # 5. Trigger commission (deferred import to avoid circular)
-        try:
-            from commissions.services import CommissionService
-            CommissionService.process_payment_commission(payment)
-        except ImportError:
-            pass
+        # 5 & 6. Trigger commission + notification after the transaction commits.
+        # Using on_commit ensures these side effects only run if the DB write
+        # succeeds — a failed SMTP call can no longer roll back a valid approval.
+        payment_id = payment.id
 
-        # 6. Trigger notification (deferred import)
-        try:
-            from notifications.services import NotificationService
-            NotificationService.send_payment_confirmation(payment)
-        except ImportError:
-            pass
+        def _post_approve():
+            from payments.models import Payment as _Payment
+            _payment = _Payment.objects.get(pk=payment_id)
+            try:
+                from commissions.services import CommissionService
+                CommissionService.process_payment_commission(_payment)
+            except Exception as e:
+                logger.error(
+                    f"Commission processing failed for payment "
+                    f"{_payment.transaction_reference}: {e}"
+                )
+            try:
+                from notifications.services import NotificationService
+                NotificationService.send_payment_confirmation(_payment)
+            except Exception as e:
+                logger.error(
+                    f"Confirmation notification failed for payment "
+                    f"{_payment.transaction_reference}: {e}"
+                )
+
+        transaction.on_commit(_post_approve)
 
         logger.info(f"Payment approved: {payment.transaction_reference}")
         return payment
@@ -140,12 +153,22 @@ class PaymentService:
             installment.status = Installment.Status.DUE
         installment.save(update_fields=["status", "updated_at"])
 
-        # Send rejection notification
-        try:
-            from notifications.services import NotificationService
-            NotificationService.send_payment_rejection(payment, reason)
-        except ImportError:
-            pass
+        # Send rejection notification after the transaction commits.
+        payment_id = payment.id
+
+        def _post_reject():
+            from payments.models import Payment as _Payment
+            _payment = _Payment.objects.get(pk=payment_id)
+            try:
+                from notifications.services import NotificationService
+                NotificationService.send_payment_rejection(_payment, reason)
+            except Exception as e:
+                logger.error(
+                    f"Rejection notification failed for payment "
+                    f"{_payment.transaction_reference}: {e}"
+                )
+
+        transaction.on_commit(_post_reject)
 
         logger.info(f"Payment rejected: {payment.transaction_reference}. Reason: {reason}")
         return payment

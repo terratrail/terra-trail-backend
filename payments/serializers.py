@@ -2,6 +2,8 @@
 Payments serializers.
 """
 
+from decimal import Decimal
+
 from rest_framework import serializers
 from payments.models import Payment
 
@@ -44,7 +46,7 @@ class RecordPaymentSerializer(serializers.Serializer):
     """Input for recording a payment."""
 
     installment_id = serializers.UUIDField()
-    amount = serializers.DecimalField(max_digits=14, decimal_places=2)
+    amount = serializers.DecimalField(max_digits=14, decimal_places=2, min_value=Decimal("0.01"))
     receipt_url = serializers.URLField(required=False, default="")
     receipt_file = serializers.FileField(required=False, default=None)
     notes = serializers.CharField(required=False, default="")

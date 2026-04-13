@@ -33,6 +33,7 @@ class Workspace(TimeStampedModel):
         FREE = "FREE", "Free"
         STARTER = "STARTER", "Starter"
         GROWTH = "GROWTH", "Growth"
+        SCALE = "SCALE", "Scale"
         ENTERPRISE = "ENTERPRISE", "Enterprise"
 
     name = models.CharField(max_length=255)
