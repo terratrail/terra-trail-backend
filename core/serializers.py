@@ -30,6 +30,7 @@ class WorkspaceSettingsSerializer(serializers.ModelSerializer):
             "can_reps_approve_bookings", "can_reps_manage_subscriptions",
             "can_reps_manage_sales_reps", "notify_customer_on_booking_status",
             "notify_admin_on_new_booking", "notify_customer_on_payment_receipt",
+            "commission_starter_pct", "commission_senior_pct", "commission_legend_pct",
         ]
 
 

@@ -3,6 +3,7 @@ Properties views — CRUD and status management endpoints.
 """
 
 from django.db.models import Count
+from django.utils.decorators import method_decorator
 from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -12,16 +13,24 @@ from drf_yasg import openapi
 
 from core.permissions import IsWorkspaceAdmin, IsWorkspaceAdminOrReadOnly
 from core.plan_guard import PlanGuard, PlanLimitExceeded
-from properties.models import BankAccount, PricingPlan, Property
+from properties.models import (
+    BankAccount, PricingPlan, Property,
+    PropertyAmenity, PropertyDocument, PropertyGallery,
+)
 from properties.serializers import (
     BankAccountSerializer,
     PricingPlanCreateSerializer,
     PricingPlanSerializer,
+    PropertyAmenitySerializer,
     PropertyCreateSerializer,
     PropertyDetailSerializer,
+    PropertyDocumentSerializer,
+    PropertyGallerySerializer,
     PropertyListSerializer,
 )
 from properties.services import PricingPlanService, PropertyService
+
+_PROP_TAG = ["Properties"]
 
 
 # ---------------------------------------------------------------------------
@@ -29,10 +38,12 @@ from properties.services import PricingPlanService, PropertyService
 # ---------------------------------------------------------------------------
 
 
+@method_decorator(name="list",   decorator=swagger_auto_schema(tags=_PROP_TAG))
+@method_decorator(name="create", decorator=swagger_auto_schema(tags=_PROP_TAG))
 class PropertyListCreateView(generics.ListCreateAPIView):
     """
-    GET  /api/v1/properties/          — List properties
-    POST /api/v1/properties/          — Create a property
+    GET  /api/v1/properties/  — List properties
+    POST /api/v1/properties/  — Create a property (all stepper fields accepted)
     """
 
     permission_classes = [IsAuthenticated, IsWorkspaceAdminOrReadOnly]
@@ -59,10 +70,12 @@ class PropertyListCreateView(generics.ListCreateAPIView):
         serializer.save(workspace=self.request.workspace)
 
 
+@method_decorator(name="retrieve",      decorator=swagger_auto_schema(tags=_PROP_TAG))
+@method_decorator(name="update",        decorator=swagger_auto_schema(tags=_PROP_TAG))
+@method_decorator(name="partial_update",decorator=swagger_auto_schema(tags=_PROP_TAG))
+@method_decorator(name="destroy",       decorator=swagger_auto_schema(tags=_PROP_TAG))
 class PropertyDetailView(generics.RetrieveUpdateDestroyAPIView):
-    """
-    GET/PATCH/DELETE /api/v1/properties/<id>/
-    """
+    """GET / PATCH / DELETE /api/v1/properties/<id>/"""
 
     permission_classes = [IsAuthenticated, IsWorkspaceAdminOrReadOnly]
     lookup_field = "id"
@@ -76,7 +89,10 @@ class PropertyDetailView(generics.RetrieveUpdateDestroyAPIView):
         return (
             Property.objects.filter(workspace=self.request.workspace)
             .select_related("location")
-            .prefetch_related("pricing_plans", "bank_accounts")
+            .prefetch_related(
+                "pricing_plans", "bank_accounts",
+                "amenities", "documents", "gallery_images",
+            )
         )
 
 
@@ -85,6 +101,16 @@ class PropertyPublishView(APIView):
 
     permission_classes = [IsAuthenticated, IsWorkspaceAdmin]
 
+    @swagger_auto_schema(
+        tags=_PROP_TAG,
+        responses={200: openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                "message": openapi.Schema(type=openapi.TYPE_STRING),
+                "status":  openapi.Schema(type=openapi.TYPE_STRING),
+            },
+        )},
+    )
     def post(self, request, id):
         try:
             prop = Property.objects.get(id=id, workspace=request.workspace)
@@ -106,6 +132,13 @@ class PropertyUnpublishView(APIView):
 
     permission_classes = [IsAuthenticated, IsWorkspaceAdmin]
 
+    @swagger_auto_schema(
+        tags=_PROP_TAG,
+        responses={200: openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={"message": openapi.Schema(type=openapi.TYPE_STRING)},
+        )},
+    )
     def post(self, request, id):
         try:
             prop = Property.objects.get(id=id, workspace=request.workspace)
@@ -123,10 +156,12 @@ class PropertyUnpublishView(APIView):
 # ---------------------------------------------------------------------------
 
 
+@method_decorator(name="list",   decorator=swagger_auto_schema(tags=_PROP_TAG))
+@method_decorator(name="create", decorator=swagger_auto_schema(tags=_PROP_TAG))
 class PricingPlanListCreateView(generics.ListCreateAPIView):
     """
-    GET  /api/v1/properties/plans/          — List all plans
-    POST /api/v1/properties/plans/          — Create a plan
+    GET  /api/v1/properties/plans/  — List all plans
+    POST /api/v1/properties/plans/  — Create a plan
     """
 
     permission_classes = [IsAuthenticated, IsWorkspaceAdminOrReadOnly]
@@ -147,8 +182,12 @@ class PricingPlanListCreateView(generics.ListCreateAPIView):
         serializer.save(workspace=self.request.workspace)
 
 
+@method_decorator(name="retrieve",      decorator=swagger_auto_schema(tags=_PROP_TAG))
+@method_decorator(name="update",        decorator=swagger_auto_schema(tags=_PROP_TAG))
+@method_decorator(name="partial_update",decorator=swagger_auto_schema(tags=_PROP_TAG))
+@method_decorator(name="destroy",       decorator=swagger_auto_schema(tags=_PROP_TAG))
 class PricingPlanDetailView(generics.RetrieveUpdateDestroyAPIView):
-    """GET/PATCH/DELETE /api/v1/properties/plans/<id>/"""
+    """GET / PATCH / DELETE /api/v1/properties/plans/<id>/"""
 
     serializer_class = PricingPlanSerializer
     permission_classes = [IsAuthenticated, IsWorkspaceAdminOrReadOnly]
@@ -163,6 +202,7 @@ class PricingPlanActivateView(APIView):
 
     permission_classes = [IsAuthenticated, IsWorkspaceAdmin]
 
+    @swagger_auto_schema(tags=_PROP_TAG)
     def post(self, request, id):
         try:
             plan = PricingPlan.objects.get(id=id, workspace=request.workspace)
@@ -180,6 +220,7 @@ class PricingPlanDeactivateView(APIView):
 
     permission_classes = [IsAuthenticated, IsWorkspaceAdmin]
 
+    @swagger_auto_schema(tags=_PROP_TAG)
     def post(self, request, id):
         try:
             plan = PricingPlan.objects.get(id=id, workspace=request.workspace)
@@ -197,6 +238,8 @@ class PricingPlanDeactivateView(APIView):
 # ---------------------------------------------------------------------------
 
 
+@method_decorator(name="list",   decorator=swagger_auto_schema(tags=_PROP_TAG))
+@method_decorator(name="create", decorator=swagger_auto_schema(tags=_PROP_TAG))
 class BankAccountListCreateView(generics.ListCreateAPIView):
     """
     GET  /api/v1/properties/bank-accounts/
@@ -217,8 +260,12 @@ class BankAccountListCreateView(generics.ListCreateAPIView):
         serializer.save(workspace=self.request.workspace)
 
 
+@method_decorator(name="retrieve",      decorator=swagger_auto_schema(tags=_PROP_TAG))
+@method_decorator(name="update",        decorator=swagger_auto_schema(tags=_PROP_TAG))
+@method_decorator(name="partial_update",decorator=swagger_auto_schema(tags=_PROP_TAG))
+@method_decorator(name="destroy",       decorator=swagger_auto_schema(tags=_PROP_TAG))
 class BankAccountDetailView(generics.RetrieveUpdateDestroyAPIView):
-    """GET/PATCH/DELETE /api/v1/properties/bank-accounts/<id>/"""
+    """GET / PATCH / DELETE /api/v1/properties/bank-accounts/<id>/"""
 
     serializer_class = BankAccountSerializer
     permission_classes = [IsAuthenticated, IsWorkspaceAdmin]
@@ -226,3 +273,129 @@ class BankAccountDetailView(generics.RetrieveUpdateDestroyAPIView):
 
     def get_queryset(self):
         return BankAccount.objects.filter(workspace=self.request.workspace)
+
+
+# ---------------------------------------------------------------------------
+# PropertyAmenity endpoints
+# ---------------------------------------------------------------------------
+
+
+@method_decorator(name="list",   decorator=swagger_auto_schema(tags=_PROP_TAG))
+@method_decorator(name="create", decorator=swagger_auto_schema(tags=_PROP_TAG))
+class PropertyAmenityListCreateView(generics.ListCreateAPIView):
+    """
+    GET  /api/v1/properties/amenities/?property_id=<uuid>  — List amenities
+    POST /api/v1/properties/amenities/                      — Add an amenity
+    """
+
+    serializer_class = PropertyAmenitySerializer
+    permission_classes = [IsAuthenticated, IsWorkspaceAdminOrReadOnly]
+
+    def get_queryset(self):
+        qs = PropertyAmenity.objects.filter(workspace=self.request.workspace)
+        property_id = self.request.query_params.get("property_id")
+        if property_id:
+            qs = qs.filter(property_id=property_id)
+        return qs.select_related("property").order_by("name")
+
+    def perform_create(self, serializer):
+        serializer.save(workspace=self.request.workspace)
+
+
+@method_decorator(name="retrieve",      decorator=swagger_auto_schema(tags=_PROP_TAG))
+@method_decorator(name="update",        decorator=swagger_auto_schema(tags=_PROP_TAG))
+@method_decorator(name="partial_update",decorator=swagger_auto_schema(tags=_PROP_TAG))
+@method_decorator(name="destroy",       decorator=swagger_auto_schema(tags=_PROP_TAG))
+class PropertyAmenityDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """GET / PATCH / DELETE /api/v1/properties/amenities/<id>/"""
+
+    serializer_class = PropertyAmenitySerializer
+    permission_classes = [IsAuthenticated, IsWorkspaceAdminOrReadOnly]
+    lookup_field = "id"
+
+    def get_queryset(self):
+        return PropertyAmenity.objects.filter(workspace=self.request.workspace)
+
+
+# ---------------------------------------------------------------------------
+# PropertyDocument endpoints
+# ---------------------------------------------------------------------------
+
+
+@method_decorator(name="list",   decorator=swagger_auto_schema(tags=_PROP_TAG))
+@method_decorator(name="create", decorator=swagger_auto_schema(tags=_PROP_TAG))
+class PropertyDocumentListCreateView(generics.ListCreateAPIView):
+    """
+    GET  /api/v1/properties/documents/?property_id=<uuid>  — List documents
+    POST /api/v1/properties/documents/                      — Add a document
+    """
+
+    serializer_class = PropertyDocumentSerializer
+    permission_classes = [IsAuthenticated, IsWorkspaceAdminOrReadOnly]
+
+    def get_queryset(self):
+        qs = PropertyDocument.objects.filter(workspace=self.request.workspace)
+        property_id = self.request.query_params.get("property_id")
+        if property_id:
+            qs = qs.filter(property_id=property_id)
+        return qs.select_related("property").order_by("document_type")
+
+    def perform_create(self, serializer):
+        serializer.save(workspace=self.request.workspace)
+
+
+@method_decorator(name="retrieve",      decorator=swagger_auto_schema(tags=_PROP_TAG))
+@method_decorator(name="update",        decorator=swagger_auto_schema(tags=_PROP_TAG))
+@method_decorator(name="partial_update",decorator=swagger_auto_schema(tags=_PROP_TAG))
+@method_decorator(name="destroy",       decorator=swagger_auto_schema(tags=_PROP_TAG))
+class PropertyDocumentDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """GET / PATCH / DELETE /api/v1/properties/documents/<id>/"""
+
+    serializer_class = PropertyDocumentSerializer
+    permission_classes = [IsAuthenticated, IsWorkspaceAdminOrReadOnly]
+    lookup_field = "id"
+
+    def get_queryset(self):
+        return PropertyDocument.objects.filter(workspace=self.request.workspace)
+
+
+# ---------------------------------------------------------------------------
+# PropertyGallery endpoints
+# ---------------------------------------------------------------------------
+
+
+@method_decorator(name="list",   decorator=swagger_auto_schema(tags=_PROP_TAG))
+@method_decorator(name="create", decorator=swagger_auto_schema(tags=_PROP_TAG))
+class PropertyGalleryListCreateView(generics.ListCreateAPIView):
+    """
+    GET  /api/v1/properties/gallery/?property_id=<uuid>  — List gallery images
+    POST /api/v1/properties/gallery/                      — Upload a gallery image
+    """
+
+    serializer_class = PropertyGallerySerializer
+    permission_classes = [IsAuthenticated, IsWorkspaceAdminOrReadOnly]
+
+    def get_queryset(self):
+        qs = PropertyGallery.objects.filter(workspace=self.request.workspace)
+        property_id = self.request.query_params.get("property_id")
+        if property_id:
+            qs = qs.filter(property_id=property_id)
+        return qs.select_related("property").order_by("order", "created_at")
+
+    def perform_create(self, serializer):
+        serializer.save(workspace=self.request.workspace)
+
+
+@method_decorator(name="retrieve",      decorator=swagger_auto_schema(tags=_PROP_TAG))
+@method_decorator(name="update",        decorator=swagger_auto_schema(tags=_PROP_TAG))
+@method_decorator(name="partial_update",decorator=swagger_auto_schema(tags=_PROP_TAG))
+@method_decorator(name="destroy",       decorator=swagger_auto_schema(tags=_PROP_TAG))
+class PropertyGalleryDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """GET / PATCH / DELETE /api/v1/properties/gallery/<id>/"""
+
+    serializer_class = PropertyGallerySerializer
+    permission_classes = [IsAuthenticated, IsWorkspaceAdminOrReadOnly]
+    lookup_field = "id"
+
+    def get_queryset(self):
+        return PropertyGallery.objects.filter(workspace=self.request.workspace)

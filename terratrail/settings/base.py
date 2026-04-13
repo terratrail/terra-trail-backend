@@ -299,12 +299,14 @@ LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
     "formatters": {
+        # Used for file logs — includes module path and line number
         "verbose": {
-            "format": "{levelname} {asctime} [{filename}:{lineno}] {message}",
+            "format": "{levelname} {asctime} [{name}:{lineno}] {message}",
             "style": "{",
         },
+        # Used for console — clean module-path format
         "simple": {
-            "format": "{levelname} {asctime} [{filename}] {message}",
+            "format": "{levelname} {asctime} [{name}] {message}",
             "style": "{",
         },
     },
@@ -327,7 +329,7 @@ LOGGING = {
             "level": "INFO",
             "class": "logging.handlers.RotatingFileHandler",
             "filename": BASE_DIR / "logs/terratrail.log",
-            "maxBytes": 1024 * 1024 * 5,  # 5MB
+            "maxBytes": 1024 * 1024 * 5,  # 5 MB
             "backupCount": 5,
             "formatter": "verbose",
         },
@@ -335,7 +337,7 @@ LOGGING = {
             "level": "ERROR",
             "class": "logging.handlers.RotatingFileHandler",
             "filename": BASE_DIR / "logs/errors.log",
-            "maxBytes": 1024 * 1024 * 5,  # 5MB
+            "maxBytes": 1024 * 1024 * 5,  # 5 MB
             "backupCount": 5,
             "formatter": "verbose",
         },
@@ -346,23 +348,75 @@ LOGGING = {
         },
     },
     "loggers": {
+        # Django internals — only warnings and above; avoids flooding the
+        # console with migration hints, template debug info, etc.
         "django": {
             "handlers": ["console", "file", "error_file"],
-            "level": "INFO",
-            "propagate": True,
+            "level": "WARNING",
+            "propagate": False,
         },
+        # Dev-server HTTP access log (basehttp.py) — silenced at WARNING
+        # so 200/304 static-file requests don't fill the console.
+        "django.server": {
+            "handlers": ["console"],
+            "level": "WARNING",
+            "propagate": False,
+        },
+        # 5xx errors from request handling → email admins + error file
         "django.request": {
             "handlers": ["mail_admins", "error_file"],
             "level": "ERROR",
             "propagate": False,
         },
+        # ── Project loggers ────────────────────────────────────────────────
+        # Each app declares: logger = logging.getLogger(__name__)
+        # which resolves to e.g. "accounts.services", "properties.views".
+        # All project loggers propagate up to "terratrail" by default,
+        # so individual app entries are only needed for overrides.
         "terratrail": {
             "handlers": ["console", "file", "error_file"],
             "level": "INFO",
+            "propagate": False,
+        },
+        "core": {
+            "handlers": ["console", "file", "error_file"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "accounts": {
+            "handlers": ["console", "file", "error_file"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "properties": {
+            "handlers": ["console", "file", "error_file"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "customers": {
+            "handlers": ["console", "file", "error_file"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "payments": {
+            "handlers": ["console", "file", "error_file"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "commissions": {
+            "handlers": ["console", "file", "error_file"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "notifications": {
+            "handlers": ["console", "file", "error_file"],
+            "level": "INFO",
+            "propagate": False,
         },
         "celery": {
             "handlers": ["console", "file"],
             "level": "INFO",
+            "propagate": False,
         },
     },
 }

@@ -2,6 +2,7 @@
 Core views — Workspace management endpoints.
 """
 
+from django.utils.decorators import method_decorator
 from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -25,6 +26,10 @@ from accounts.services import WorkspaceService
 from accounts.serializers import WorkspaceMembershipSerializer
 
 
+_WS_TAG = ["Workspaces"]
+
+
+@method_decorator(name="create", decorator=swagger_auto_schema(tags=_WS_TAG))
 class WorkspaceCreateView(generics.CreateAPIView):
     """
     POST /api/v1/workspaces/create/
@@ -57,6 +62,7 @@ class MyWorkspacesView(APIView):
     permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(
+        tags=_WS_TAG,
         responses={200: WorkspaceMinimalSerializer(many=True)},
         operation_description="Lists all workspaces the authenticated user belongs to.",
     )
@@ -75,6 +81,9 @@ class MyWorkspacesView(APIView):
         return Response(serializer.data)
 
 
+@method_decorator(name="retrieve",       decorator=swagger_auto_schema(tags=_WS_TAG))
+@method_decorator(name="update",         decorator=swagger_auto_schema(tags=_WS_TAG))
+@method_decorator(name="partial_update", decorator=swagger_auto_schema(tags=_WS_TAG))
 class WorkspaceDetailView(generics.RetrieveUpdateAPIView):
     """
     GET/PATCH /api/v1/workspaces/detail/
@@ -90,6 +99,9 @@ class WorkspaceDetailView(generics.RetrieveUpdateAPIView):
         return self.request.workspace
 
 
+@method_decorator(name="retrieve",       decorator=swagger_auto_schema(tags=_WS_TAG))
+@method_decorator(name="update",         decorator=swagger_auto_schema(tags=_WS_TAG))
+@method_decorator(name="partial_update", decorator=swagger_auto_schema(tags=_WS_TAG))
 class WorkspaceSettingsView(generics.RetrieveUpdateAPIView):
     """
     GET/PATCH /api/v1/workspaces/settings/
@@ -107,6 +119,7 @@ class WorkspaceSettingsView(generics.RetrieveUpdateAPIView):
             return WorkspaceSettings.objects.create(workspace=self.request.workspace)
 
 
+@method_decorator(name="list", decorator=swagger_auto_schema(tags=_WS_TAG))
 class WorkspaceActivityListView(generics.ListAPIView):
     """
     GET /api/v1/workspaces/activity/
@@ -125,6 +138,7 @@ class WorkspaceActivityListView(generics.ListAPIView):
         )
 
 
+@method_decorator(name="list", decorator=swagger_auto_schema(tags=_WS_TAG))
 class WorkspaceMembersListView(generics.ListAPIView):
     """
     GET /api/v1/workspaces/members/
@@ -163,6 +177,7 @@ class WorkspaceMembersListView(generics.ListAPIView):
         return Response(data)
 
 
+@method_decorator(name="create", decorator=swagger_auto_schema(tags=_WS_TAG))
 class InviteMemberView(generics.CreateAPIView):
     """
     POST /api/v1/workspaces/invites/
@@ -206,6 +221,7 @@ class WorkspaceHomeView(APIView):
     """
 
     permission_classes = []  # Allow public access to landing page
+    schema = None  # Exclude from API docs — returns HTML, not JSON
 
     def get(self, request):
         from django.shortcuts import render
@@ -228,6 +244,7 @@ class PlanListView(APIView):
 
     permission_classes = [IsAuthenticated]
 
+    @swagger_auto_schema(tags=_WS_TAG)
     def get(self, request):
         current_plan = request.workspace.billing_plan
         catalogue = []
@@ -253,7 +270,7 @@ class SelectPlanView(APIView):
 
     permission_classes = [IsAuthenticated]
 
-    @swagger_auto_schema(request_body=SelectPlanSerializer)
+    @swagger_auto_schema(tags=_WS_TAG, request_body=SelectPlanSerializer)
     def post(self, request):
         serializer = SelectPlanSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -290,6 +307,7 @@ class PlanUsageView(APIView):
 
     permission_classes = [IsAuthenticated]
 
+    @swagger_auto_schema(tags=_WS_TAG)
     def get(self, request):
         usage = PlanGuard.get_usage(request.user, request.workspace)
         return Response(usage)

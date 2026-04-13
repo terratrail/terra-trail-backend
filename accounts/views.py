@@ -2,6 +2,7 @@
 Accounts views — Auth endpoints and user management.
 """
 
+from django.utils.decorators import method_decorator
 from rest_framework import generics, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -9,6 +10,8 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenRefreshView
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+
+_AUTH_TAG = ["Auth"]
 
 import logging
 from accounts.models import User, WorkspaceMembership
@@ -38,6 +41,7 @@ class RegisterView(APIView):
     permission_classes = [AllowAny]
 
     @swagger_auto_schema(
+        tags=_AUTH_TAG,
         request_body=RegisterSerializer,
         responses={201: UserSerializer},
         operation_description="Register a new user account. Returns JWT tokens.",
@@ -74,6 +78,7 @@ class LoginView(APIView):
     permission_classes = [AllowAny]
 
     @swagger_auto_schema(
+        tags=_AUTH_TAG,
         request_body=LoginSerializer,
         responses={200: UserSerializer},
         operation_description="Authenticate with email + password. Returns JWT tokens.",
@@ -99,6 +104,9 @@ class LoginView(APIView):
         )
 
 
+@method_decorator(name="retrieve",       decorator=swagger_auto_schema(tags=_AUTH_TAG))
+@method_decorator(name="update",         decorator=swagger_auto_schema(tags=_AUTH_TAG))
+@method_decorator(name="partial_update", decorator=swagger_auto_schema(tags=_AUTH_TAG))
 class MeView(generics.RetrieveUpdateAPIView):
     """
     GET/PATCH /api/v1/auth/me/
@@ -124,6 +132,7 @@ class OTPRequestView(APIView):
     throttle_classes = [OTPRequestThrottle]
 
     @swagger_auto_schema(
+        tags=_AUTH_TAG,
         request_body=OTPRequestSerializer,
         responses={200: openapi.Response("OTP sent successfully.")},
         operation_description="Request an OTP for customer portal login.",
@@ -162,6 +171,7 @@ class OTPVerifyView(APIView):
     throttle_classes = [OTPVerifyThrottle]
 
     @swagger_auto_schema(
+        tags=_AUTH_TAG,
         request_body=OTPVerifySerializer,
         responses={200: UserSerializer},
         operation_description="Verify an OTP and return session tokens.",
@@ -183,6 +193,7 @@ class OTPVerifyView(APIView):
         )
 
 
+@method_decorator(name="list", decorator=swagger_auto_schema(tags=_AUTH_TAG))
 class WorkspaceMembersView(generics.ListAPIView):
     """
     GET /api/v1/auth/members/
@@ -211,6 +222,7 @@ class AddMemberView(APIView):
     permission_classes = [IsAuthenticated, IsWorkspaceAdmin]
 
     @swagger_auto_schema(
+        tags=_AUTH_TAG,
         request_body=AddMemberSerializer,
         responses={201: WorkspaceMembershipSerializer},
         operation_description="Add a user to the current workspace.",

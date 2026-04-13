@@ -11,7 +11,7 @@ payment spread methods:
 
 from decimal import Decimal
 from django.db import models
-from django.core.validators import MinValueValidator
+from django.core.validators import MinValueValidator, MaxValueValidator
 
 from core.models import WorkspaceScopedModel
 
@@ -48,6 +48,23 @@ class Property(WorkspaceScopedModel):
     )
     featured_image = models.ImageField(
         upload_to="properties/images/", blank=True, null=True
+    )
+
+    # Commission overrides per tier — null means use workspace default
+    commission_override_starter = models.DecimalField(
+        max_digits=5, decimal_places=2, null=True, blank=True,
+        validators=[MinValueValidator(Decimal("0.00")), MaxValueValidator(Decimal("100.00"))],
+        help_text="Override workspace default Starter tier commission % for this property.",
+    )
+    commission_override_senior = models.DecimalField(
+        max_digits=5, decimal_places=2, null=True, blank=True,
+        validators=[MinValueValidator(Decimal("0.00")), MaxValueValidator(Decimal("100.00"))],
+        help_text="Override workspace default Senior tier commission % for this property.",
+    )
+    commission_override_legend = models.DecimalField(
+        max_digits=5, decimal_places=2, null=True, blank=True,
+        validators=[MinValueValidator(Decimal("0.00")), MaxValueValidator(Decimal("100.00"))],
+        help_text="Override workspace default Legend tier commission % for this property.",
     )
 
     class Meta:
@@ -209,3 +226,123 @@ class BankAccount(WorkspaceScopedModel):
 
     def __str__(self):
         return f"{self.bank_name} — {self.account_number}"
+
+
+class PropertyAmenity(WorkspaceScopedModel):
+    """
+    An amenity offered by a property (e.g. Perimeter Fencing, Road Network).
+
+    Tracks both the amenity name and its completion status so the workspace
+    can communicate availability to potential buyers.
+    """
+
+    class Status(models.TextChoices):
+        NOT_STARTED = "NOT_STARTED", "Not Started"
+        IN_PROGRESS = "IN_PROGRESS", "In Progress"
+        COMPLETED = "COMPLETED", "Completed"
+
+    property = models.ForeignKey(
+        Property,
+        on_delete=models.CASCADE,
+        related_name="amenities",
+    )
+    name = models.CharField(max_length=255)
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.NOT_STARTED,
+    )
+    description = models.TextField(blank=True, default="")
+
+    class Meta:
+        verbose_name_plural = "Property Amenities"
+        ordering = ["name"]
+        indexes = [
+            models.Index(fields=["workspace", "property"]),
+        ]
+
+    def __str__(self):
+        return f"{self.name} ({self.property.name})"
+
+
+class PropertyDocument(WorkspaceScopedModel):
+    """
+    A legal or administrative document associated with a property
+    (e.g. C of O, Deed of Assignment, Survey Plan).
+
+    Tracks availability status so agents can show buyers what documentation
+    is ready before purchase.
+    """
+
+    class DocumentType(models.TextChoices):
+        C_OF_O = "C_OF_O", "Certificate of Occupancy (C of O)"
+        DEED_OF_ASSIGNMENT = "DEED_OF_ASSIGNMENT", "Deed of Assignment"
+        SURVEY_PLAN = "SURVEY_PLAN", "Survey Plan"
+        OTHER = "OTHER", "Other"
+
+    class Status(models.TextChoices):
+        NOT_STARTED = "NOT_STARTED", "Not Started"
+        IN_PROGRESS = "IN_PROGRESS", "In Progress"
+        READY = "READY", "Ready"
+
+    property = models.ForeignKey(
+        Property,
+        on_delete=models.CASCADE,
+        related_name="documents",
+    )
+    document_type = models.CharField(
+        max_length=30,
+        choices=DocumentType.choices,
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.NOT_STARTED,
+    )
+    document_file = models.FileField(
+        upload_to="properties/documents/",
+        blank=True,
+        null=True,
+        help_text="Optional — upload the actual document file.",
+    )
+    notes = models.TextField(blank=True, default="")
+
+    class Meta:
+        verbose_name_plural = "Property Documents"
+        ordering = ["document_type"]
+        indexes = [
+            models.Index(fields=["workspace", "property"]),
+        ]
+
+    def __str__(self):
+        return f"{self.get_document_type_display()} — {self.property.name}"
+
+
+class PropertyGallery(WorkspaceScopedModel):
+    """
+    Gallery images for a property.
+
+    The primary cover image lives on Property.featured_image.
+    These are the additional gallery photos shown in the property detail page.
+    """
+
+    property = models.ForeignKey(
+        Property,
+        on_delete=models.CASCADE,
+        related_name="gallery_images",
+    )
+    image = models.ImageField(upload_to="properties/gallery/")
+    caption = models.CharField(max_length=255, blank=True, default="")
+    order = models.PositiveIntegerField(
+        default=0,
+        help_text="Display order — lower numbers appear first.",
+    )
+
+    class Meta:
+        ordering = ["order", "created_at"]
+        indexes = [
+            models.Index(fields=["workspace", "property"]),
+        ]
+
+    def __str__(self):
+        return f"Gallery image for {self.property.name} (order {self.order})"

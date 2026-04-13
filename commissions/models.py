@@ -21,10 +21,9 @@ class SalesRep(WorkspaceScopedModel):
     """
 
     class Tier(models.TextChoices):
-        BRONZE = "BRONZE", "Bronze"
-        SILVER = "SILVER", "Silver"
-        GOLD = "GOLD", "Gold"
-        PLATINUM = "PLATINUM", "Platinum"
+        STARTER = "STARTER", "Starter"
+        SENIOR = "SENIOR", "Senior"
+        LEGEND = "LEGEND", "Legend"
 
     name = models.CharField(max_length=255)
     email = models.EmailField()
@@ -32,7 +31,7 @@ class SalesRep(WorkspaceScopedModel):
     tier = models.CharField(
         max_length=20,
         choices=Tier.choices,
-        default=Tier.BRONZE,
+        default=Tier.STARTER,
     )
     referral_code = models.CharField(max_length=50, db_index=True)
 

@@ -4,12 +4,14 @@ Notifications views — Notification logs and dashboard API.
 
 from decimal import Decimal
 from django.db.models import Sum, Count, Q, F
-from rest_framework import generics, status
+from django.utils.decorators import method_decorator
+from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from drf_yasg.utils import swagger_auto_schema
-from drf_yasg import openapi
+
+_NOTIF_TAG = ["Notifications"]
 
 from core.permissions import IsWorkspaceAdmin, IsWorkspaceAdminOrReadOnly
 from customers.models import Installment, Subscription
@@ -19,6 +21,7 @@ from notifications.models import NotificationLog
 from notifications.serializers import NotificationLogSerializer
 
 
+@method_decorator(name="list", decorator=swagger_auto_schema(tags=_NOTIF_TAG))
 class NotificationLogListView(generics.ListAPIView):
     """
     GET /api/v1/notifications/
@@ -56,6 +59,7 @@ class DashboardView(APIView):
 
     permission_classes = [IsAuthenticated, IsWorkspaceAdminOrReadOnly]
 
+    @swagger_auto_schema(tags=_NOTIF_TAG)
     def get(self, request):
         workspace = request.workspace
 
@@ -116,6 +120,7 @@ class LeaderboardView(APIView):
 
     permission_classes = [IsAuthenticated, IsWorkspaceAdminOrReadOnly]
 
+    @swagger_auto_schema(tags=_NOTIF_TAG)
     def get(self, request):
         workspace = request.workspace
 
@@ -160,6 +165,7 @@ class RevenueBreakdownView(APIView):
 
     permission_classes = [IsAuthenticated, IsWorkspaceAdmin]
 
+    @swagger_auto_schema(tags=_NOTIF_TAG)
     def get(self, request):
         workspace = request.workspace
 

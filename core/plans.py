@@ -6,11 +6,17 @@ None = unlimited.
 
 Workspace limit: how many workspaces the plan owner can create/own.
 Per-workspace limits: properties and customers are scoped per workspace.
-Sales reps and team members are unlimited on all paid plans.
+Sales reps and team members are unlimited on all plans.
 
 PLAN_CATALOGUE is the public-facing description served to the onboarding UI
 via GET /api/v1/workspaces/billing/plans/.
+
+Payment details are loaded from environment variables via terratrail.config
+so they are never hardcoded in source code.
 """
+
+from terratrail.config import settings as app_settings
+
 
 # ---------------------------------------------------------------------------
 # Resource limits per plan
@@ -21,7 +27,7 @@ PLAN_LIMITS = {
         "workspaces": 1,
         "properties": 1,
         "customers": 2,
-        "sales_reps": 1,
+        "sales_reps": None,
         "team_members": 1,
     },
     "STARTER": {
@@ -74,7 +80,7 @@ PLAN_CATALOGUE = [
             "1 workspace",
             "1 estate",
             "2 customers",
-            "1 sales rep",
+            "Unlimited sales reps",
             "Basic payment & installment tracking",
         ],
         "recommended": False,
@@ -166,21 +172,17 @@ PLAN_CATALOGUE = [
     },
 ]
 
+
 # ---------------------------------------------------------------------------
-# Payment details (bank transfer)
+# Payment details — loaded from environment via config
 # ---------------------------------------------------------------------------
 
 PAYMENT_DETAILS = {
-    "bank_name": "Guaranty Trust Bank",
-    "account_name": "TerraTrail Technologies Ltd",
-    "account_number": "0123456789",   # TODO: replace with real account
-    "currency": "NGN",
-    "instructions": (
-        "Transfer the plan amount to the account above. "
-        "Use your registered email as the payment reference. "
-        "Send your proof of payment to billing@terratrail.io "
-        "and your plan will be activated within 24 hours."
-    ),
+    "bank_name": app_settings.BANK_NAME,
+    "account_name": app_settings.BANK_ACCOUNT_NAME,
+    "account_number": app_settings.BANK_ACCOUNT_NUMBER,
+    "currency": app_settings.PAYMENT_CURRENCY,
+    "instructions": app_settings.PAYMENT_INSTRUCTIONS,
 }
 
 

@@ -225,6 +225,9 @@ class WorkspaceService:
         """
         Create a workspace, assign user as OWNER,
         initialize settings, and log activity.
+
+        A welcome email is dispatched after the transaction commits so that
+        a failing SMTP call never rolls back a valid workspace creation.
         """
         workspace = Workspace.objects.create(name=name, **kwargs)
 
@@ -248,6 +251,40 @@ class WorkspaceService:
             action_text=f"created workspace '{name}'",
             category="Workspace",
         )
+
+        # Send welcome email after the transaction commits successfully
+        workspace_id = workspace.id
+        user_email = user.email
+        user_name = user.full_name
+
+        def _send_welcome():
+            from core.models import Workspace as _Workspace
+            from notifications.services import NotificationService
+            from terratrail.config import settings as app_settings
+
+            try:
+                _workspace = _Workspace.objects.get(pk=workspace_id)
+            except _Workspace.DoesNotExist:
+                return
+
+            subject = f"Your workspace '{name}' is ready — {app_settings.COMPANY_NAME}"
+            message = (
+                f"Hi {user_name},\n\n"
+                f"Your workspace '{name}' has been created and is ready to use.\n\n"
+                f"Get started by inviting your team, adding your first property, "
+                f"and setting up your billing plan.\n\n"
+                f"Need help? Reach us at {app_settings.SUPPORT_EMAIL}.\n\n"
+                f"— The {app_settings.COMPANY_NAME} Team"
+            )
+
+            NotificationService.send_email(
+                workspace=_workspace,
+                recipient=user_email,
+                subject=subject,
+                message=message,
+            )
+
+        transaction.on_commit(_send_welcome)
 
         return workspace
 

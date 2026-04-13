@@ -2,12 +2,15 @@
 Customers views — CRUD for customers and subscriptions.
 """
 
+from django.utils.decorators import method_decorator
 from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+
+_CUST_TAG = ["Customers"]
 
 from core.permissions import IsWorkspaceAdmin, IsWorkspaceAdminOrReadOnly
 from core.plan_guard import PlanGuard, PlanLimitExceeded
@@ -29,6 +32,7 @@ from properties.models import PricingPlan, Property
 # ---------------------------------------------------------------------------
 
 
+@method_decorator(name="list", decorator=swagger_auto_schema(tags=_CUST_TAG))
 class CustomerListCreateView(generics.ListCreateAPIView):
     """
     GET  /api/v1/customers/          — List customers
@@ -50,6 +54,7 @@ class CustomerListCreateView(generics.ListCreateAPIView):
         )
 
     @swagger_auto_schema(
+        tags=_CUST_TAG,
         request_body=CustomerCreateSerializer,
         responses={201: CustomerSerializer},
         operation_description="Create a customer (optionally with subscription).",
@@ -105,6 +110,10 @@ class CustomerListCreateView(generics.ListCreateAPIView):
         return Response(response_data, status=status.HTTP_201_CREATED)
 
 
+@method_decorator(name="retrieve",       decorator=swagger_auto_schema(tags=_CUST_TAG))
+@method_decorator(name="update",         decorator=swagger_auto_schema(tags=_CUST_TAG))
+@method_decorator(name="partial_update", decorator=swagger_auto_schema(tags=_CUST_TAG))
+@method_decorator(name="destroy",        decorator=swagger_auto_schema(tags=_CUST_TAG))
 class CustomerDetailView(generics.RetrieveUpdateDestroyAPIView):
     """GET/PATCH/DELETE /api/v1/customers/<id>/"""
 
@@ -130,6 +139,7 @@ class CustomerDetailView(generics.RetrieveUpdateDestroyAPIView):
 # ---------------------------------------------------------------------------
 
 
+@method_decorator(name="list", decorator=swagger_auto_schema(tags=_CUST_TAG))
 class SubscriptionListView(generics.ListAPIView):
     """GET /api/v1/customers/subscriptions/"""
 
@@ -145,6 +155,7 @@ class SubscriptionListView(generics.ListAPIView):
         )
 
 
+@method_decorator(name="retrieve", decorator=swagger_auto_schema(tags=_CUST_TAG))
 class SubscriptionDetailView(generics.RetrieveAPIView):
     """GET /api/v1/customers/subscriptions/<id>/"""
 
@@ -170,6 +181,7 @@ class SubscriptionCreateView(APIView):
     permission_classes = [IsAuthenticated, IsWorkspaceAdmin]
 
     @swagger_auto_schema(
+        tags=_CUST_TAG,
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
             required=["customer_id", "property_id", "pricing_plan_id"],
@@ -236,6 +248,7 @@ class SubscriptionCreateView(APIView):
 # ---------------------------------------------------------------------------
 
 
+@method_decorator(name="list", decorator=swagger_auto_schema(tags=_CUST_TAG))
 class InstallmentListView(generics.ListAPIView):
     """
     GET /api/v1/customers/installments/

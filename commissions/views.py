@@ -2,6 +2,7 @@
 Commissions views — Sales reps and commission management.
 """
 
+from django.utils.decorators import method_decorator
 from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -9,7 +10,9 @@ from rest_framework.views import APIView
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
-from core.permissions import IsWorkspaceAdmin, IsWorkspaceAdminOrReadOnly
+_COMM_TAG = ["Commissions"]
+
+from core.permissions import IsWorkspaceAdmin
 from core.plan_guard import PlanGuard, PlanLimitExceeded
 from commissions.models import Commission, SalesRep
 from commissions.serializers import (
@@ -25,6 +28,8 @@ from commissions.services import CommissionService
 # ---------------------------------------------------------------------------
 
 
+@method_decorator(name="list",   decorator=swagger_auto_schema(tags=_COMM_TAG))
+@method_decorator(name="create", decorator=swagger_auto_schema(tags=_COMM_TAG))
 class SalesRepListCreateView(generics.ListCreateAPIView):
     """
     GET  /api/v1/commissions/reps/
@@ -54,6 +59,10 @@ class SalesRepListCreateView(generics.ListCreateAPIView):
         serializer.save(workspace=self.request.workspace)
 
 
+@method_decorator(name="retrieve",       decorator=swagger_auto_schema(tags=_COMM_TAG))
+@method_decorator(name="update",         decorator=swagger_auto_schema(tags=_COMM_TAG))
+@method_decorator(name="partial_update", decorator=swagger_auto_schema(tags=_COMM_TAG))
+@method_decorator(name="destroy",        decorator=swagger_auto_schema(tags=_COMM_TAG))
 class SalesRepDetailView(generics.RetrieveUpdateDestroyAPIView):
     """GET/PATCH/DELETE /api/v1/commissions/reps/<id>/"""
 
@@ -72,6 +81,7 @@ class SalesRepDetailView(generics.RetrieveUpdateDestroyAPIView):
 # ---------------------------------------------------------------------------
 
 
+@method_decorator(name="list", decorator=swagger_auto_schema(tags=_COMM_TAG))
 class CommissionListView(generics.ListAPIView):
     """
     GET /api/v1/commissions/
@@ -101,6 +111,7 @@ class CommissionMarkPaidView(APIView):
     permission_classes = [IsAuthenticated, IsWorkspaceAdmin]
 
     @swagger_auto_schema(
+        tags=_COMM_TAG,
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
             properties={

@@ -2,12 +2,15 @@
 Payments views — Record, approve, reject payments.
 """
 
+from django.utils.decorators import method_decorator
 from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+
+_PAY_TAG = ["Payments"]
 
 from core.permissions import IsWorkspaceAdmin, IsWorkspaceAdminOrReadOnly
 from customers.models import Installment
@@ -20,6 +23,7 @@ from payments.serializers import (
 from payments.services import PaymentService
 
 
+@method_decorator(name="list", decorator=swagger_auto_schema(tags=_PAY_TAG))
 class PaymentListView(generics.ListAPIView):
     """
     GET /api/v1/payments/
@@ -43,6 +47,7 @@ class PaymentListView(generics.ListAPIView):
         )
 
 
+@method_decorator(name="retrieve", decorator=swagger_auto_schema(tags=_PAY_TAG))
 class PaymentDetailView(generics.RetrieveAPIView):
     """GET /api/v1/payments/<id>/"""
 
@@ -68,6 +73,7 @@ class RecordPaymentView(APIView):
     permission_classes = [IsAuthenticated, IsWorkspaceAdminOrReadOnly]
 
     @swagger_auto_schema(
+        tags=_PAY_TAG,
         request_body=RecordPaymentSerializer,
         responses={201: PaymentSerializer},
         operation_description="Record a new payment against an installment.",
@@ -116,6 +122,7 @@ class ApprovePaymentView(APIView):
 
     permission_classes = [IsAuthenticated, IsWorkspaceAdmin]
 
+    @swagger_auto_schema(tags=_PAY_TAG)
     def post(self, request, id):
         try:
             payment = Payment.objects.get(id=id, workspace=request.workspace)
@@ -142,6 +149,7 @@ class RejectPaymentView(APIView):
 
     permission_classes = [IsAuthenticated, IsWorkspaceAdmin]
 
+    @swagger_auto_schema(tags=_PAY_TAG)
     def post(self, request, id):
         serializer = ApproveRejectSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

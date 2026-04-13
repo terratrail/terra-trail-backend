@@ -6,7 +6,9 @@ ensuring consistent multi-tenancy enforcement at the model layer.
 """
 
 import uuid
+from decimal import Decimal
 from django.db import models
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils.text import slugify
 
 
@@ -131,6 +133,23 @@ class WorkspaceSettings(WorkspaceScopedModel):
     notify_customer_on_booking_status = models.BooleanField(default=True)
     notify_admin_on_new_booking = models.BooleanField(default=True)
     notify_customer_on_payment_receipt = models.BooleanField(default=True)
+
+    # Default commission rates per sales rep tier (can be overridden per property)
+    commission_starter_pct = models.DecimalField(
+        max_digits=5, decimal_places=2, default=Decimal("0.00"),
+        validators=[MinValueValidator(Decimal("0.00")), MaxValueValidator(Decimal("100.00"))],
+        help_text="Default commission % for Starter tier sales reps.",
+    )
+    commission_senior_pct = models.DecimalField(
+        max_digits=5, decimal_places=2, default=Decimal("0.00"),
+        validators=[MinValueValidator(Decimal("0.00")), MaxValueValidator(Decimal("100.00"))],
+        help_text="Default commission % for Senior tier sales reps.",
+    )
+    commission_legend_pct = models.DecimalField(
+        max_digits=5, decimal_places=2, default=Decimal("0.00"),
+        validators=[MinValueValidator(Decimal("0.00")), MaxValueValidator(Decimal("100.00"))],
+        help_text="Default commission % for Legend tier sales reps.",
+    )
 
     class Meta:
         verbose_name_plural = "Workspace Settings"

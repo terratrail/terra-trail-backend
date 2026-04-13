@@ -32,4 +32,8 @@ app.conf.beat_schedule = {
         "task": "core.tasks.purge_expired_invitations",
         "schedule": crontab(hour=2, minute=0),  # Daily at 2 AM UTC
     },
+    "check-expiring-plans": {
+        "task": "core.tasks.check_expiring_plans",
+        "schedule": crontab(hour=9, minute=0),  # Daily at 9 AM UTC
+    },
 }
