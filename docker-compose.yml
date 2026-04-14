@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: terratrail
+      POSTGRES_USER: terratrail_user
+      POSTGRES_PASSWORD: terratrail_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U terratrail_user -d terratrail"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  web:
+    build: .
+    command: gunicorn --bind 0.0.0.0:8000 --workers 3 terratrail.wsgi:application
+    volumes:
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgres://terratrail_user:terratrail_password@db:5432/terratrail
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - DJANGO_SETTINGS_MODULE=terratrail.settings.production
+      - SECRET_KEY=generate_a_secure_secret_key_here
+      - ALLOWED_HOSTS=localhost,127.0.0.1,.localhost,web
+      - DEBUG=False
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  celery_worker:
+    build: .
+    command: celery -A terratrail worker -l INFO
+    environment:
+      - DATABASE_URL=postgres://terratrail_user:terratrail_password@db:5432/terratrail
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - DJANGO_SETTINGS_MODULE=terratrail.settings.production
+    depends_on:
+      - redis
+      - db
+
+  celery_beat:
+    build: .
+    command: celery -A terratrail beat -l INFO
+    environment:
+      - DATABASE_URL=postgres://terratrail_user:terratrail_password@db:5432/terratrail
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - DJANGO_SETTINGS_MODULE=terratrail.settings.production
+    depends_on:
+      - redis
+      - db
+
+volumes:
+  postgres_data:
+  redis_data:
+  static_volume:
+  media_volume:
