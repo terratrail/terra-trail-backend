@@ -47,6 +47,7 @@ urlpatterns = [
     path("api/v1/payments/", include("payments.urls")),
     path("api/v1/commissions/", include("commissions.urls")),
     path("api/v1/notifications/", include("notifications.urls")),
+    path("api/v1/portal/", include("customers.portal_urls")),
     path(
         "api/v1/docs/",
         schema_view.with_ui("swagger", cache_timeout=0),

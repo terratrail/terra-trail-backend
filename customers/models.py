@@ -1,16 +1,19 @@
 """
-Customers models — Customer, Subscription, Installment.
+Customers models — Customer, Subscription, Installment, CustomerPortalSession.
 
 The installment schedule is generated on subscription creation via the
 service layer. Installment statuses drive the reminder engine and
 payment flow.
 """
 
+import secrets
+from datetime import timedelta
 from decimal import Decimal
 from django.db import models
 from django.core.validators import MinValueValidator
+from django.utils import timezone
 
-from core.models import WorkspaceScopedModel
+from core.models import TimeStampedModel, WorkspaceScopedModel
 from properties.models import PricingPlan, Property
 
 
@@ -189,3 +192,43 @@ class Installment(WorkspaceScopedModel):
             f"#{self.installment_number} — {self.subscription.customer.full_name} "
             f"— ₦{self.amount} ({self.status})"
         )
+
+
+class CustomerPortalSession(TimeStampedModel):
+    """
+    Token-based session for the customer self-service portal.
+
+    Customers authenticate via OTP (email + phone matched against the
+    Customer model). On success a 30-minute session token is issued.
+    The token is sent in the Authorization header as:
+        Authorization: PortalToken <token>
+    """
+
+    SESSION_MINUTES = 30
+
+    customer = models.ForeignKey(
+        Customer,
+        on_delete=models.CASCADE,
+        related_name="portal_sessions",
+    )
+    token = models.CharField(max_length=64, unique=True, db_index=True)
+    expires_at = models.DateTimeField()
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["token", "is_active"]),
+        ]
+
+    def __str__(self):
+        return f"PortalSession({self.customer.email})"
+
+    @classmethod
+    def create_for_customer(cls, customer):
+        token = secrets.token_urlsafe(48)
+        expires_at = timezone.now() + timedelta(minutes=cls.SESSION_MINUTES)
+        return cls.objects.create(customer=customer, token=token, expires_at=expires_at)
+
+    @property
+    def is_expired(self):
+        return timezone.now() > self.expires_at

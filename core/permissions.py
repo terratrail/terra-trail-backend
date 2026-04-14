@@ -1,8 +1,78 @@
 """
-Core permissions — Role-based access control.
+Core permissions — Role-based access control and customer portal auth.
 """
 
+from rest_framework.authentication import BaseAuthentication
+from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.permissions import BasePermission
+
+
+# ---------------------------------------------------------------------------
+# Customer portal authentication
+# ---------------------------------------------------------------------------
+
+class PortalUser:
+    """
+    Lightweight proxy returned by CustomerPortalAuthentication.
+
+    DRF requires request.user to have `is_authenticated`. This wraps a
+    Customer instance so portal views can do `request.user.customer`.
+    """
+
+    is_authenticated = True
+    is_anonymous = False
+
+    def __init__(self, customer):
+        self.customer = customer
+        self.pk = customer.pk
+        self.id = customer.id
+
+
+class CustomerPortalAuthentication(BaseAuthentication):
+    """
+    DRF authentication backend for the customer self-service portal.
+
+    Reads the token from:
+        Authorization: PortalToken <token>
+
+    On success sets:
+        request.user  = PortalUser(customer)
+        request.auth  = CustomerPortalSession instance
+    """
+
+    def authenticate(self, request):
+        auth_header = request.META.get("HTTP_AUTHORIZATION", "")
+        if not auth_header.startswith("PortalToken "):
+            return None
+
+        token_key = auth_header.split(" ", 1)[1].strip()
+
+        from customers.models import CustomerPortalSession
+
+        try:
+            session = CustomerPortalSession.objects.select_related("customer").get(
+                token=token_key,
+                is_active=True,
+            )
+        except CustomerPortalSession.DoesNotExist:
+            raise AuthenticationFailed("Invalid portal token.")
+
+        if session.is_expired:
+            session.is_active = False
+            session.save(update_fields=["is_active", "updated_at"])
+            raise AuthenticationFailed("Portal session has expired. Please log in again.")
+
+        return (PortalUser(session.customer), session)
+
+    def authenticate_header(self, _request):
+        return "PortalToken"
+
+
+class IsCustomerPortalUser(BasePermission):
+    """Allows access only to authenticated customer portal users."""
+
+    def has_permission(self, request, view):
+        return isinstance(request.user, PortalUser)
 
 
 class IsWorkspaceMember(BasePermission):

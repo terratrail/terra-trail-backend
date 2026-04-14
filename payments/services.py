@@ -97,8 +97,23 @@ class PaymentService:
             subscription.status = Subscription.Status.ACTIVE
         subscription.save(update_fields=["amount_paid", "balance", "status", "updated_at"])
 
-        # 4. Activate next installment
-        PaymentService._activate_next_installment(subscription)
+        # 4. If this was the initial payment (installment #1), recalculate all
+        #    future due dates anchored to today's approval date (PRD 5.3.2).
+        if installment.installment_number == 1:
+            try:
+                from customers.services import SubscriptionService
+                SubscriptionService.regenerate_schedule(
+                    subscription=subscription,
+                    new_start_date=date.today(),
+                )
+            except Exception as e:
+                logger.error(
+                    f"Schedule regeneration failed for subscription "
+                    f"{subscription.id}: {e}"
+                )
+        else:
+            # 4b. For subsequent payments, just activate the next installment.
+            PaymentService._activate_next_installment(subscription)
 
         # 5 & 6. Trigger commission + notification after the transaction commits.
         # Using on_commit ensures these side effects only run if the DB write

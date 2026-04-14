@@ -19,12 +19,19 @@ from properties.models import (
 # Simple / standalone serializers
 # ---------------------------------------------------------------------------
 
+
 class PropertyLocationSerializer(serializers.ModelSerializer):
     class Meta:
         model = PropertyLocation
         fields = [
-            "id", "address", "city", "state", "country",
-            "postal_code", "latitude", "longitude",
+            "id",
+            "address",
+            "city",
+            "state",
+            "country",
+            "postal_code",
+            "latitude",
+            "longitude",
         ]
         read_only_fields = ["id"]
 
@@ -33,8 +40,13 @@ class BankAccountSerializer(serializers.ModelSerializer):
     class Meta:
         model = BankAccount
         fields = [
-            "id", "property", "bank_name", "account_name", "account_number",
-            "is_active", "created_at",
+            "id",
+            "property",
+            "bank_name",
+            "account_name",
+            "account_number",
+            "is_active",
+            "created_at",
         ]
         read_only_fields = ["id", "created_at"]
 
@@ -47,20 +59,41 @@ class PricingPlanSerializer(serializers.ModelSerializer):
     class Meta:
         model = PricingPlan
         fields = [
-            "id", "property", "plan_name", "land_size", "total_price",
-            "payment_type", "initial_payment", "duration_months",
-            "payment_spread_method", "monthly_installment",
-            "is_active", "is_locked", "created_at", "updated_at",
+            "id",
+            "property",
+            "plan_name",
+            "land_size",
+            "total_price",
+            "payment_type",
+            "initial_payment",
+            "duration_months",
+            "payment_spread_method",
+            "monthly_installment",
+            "is_active",
+            "is_locked",
+            "created_at",
+            "updated_at",
         ]
-        read_only_fields = ["id", "monthly_installment", "is_locked", "created_at", "updated_at"]
+        read_only_fields = [
+            "id",
+            "monthly_installment",
+            "is_locked",
+            "created_at",
+            "updated_at",
+        ]
 
     def validate(self, attrs):
         """Prevent modifying spread method on locked plans."""
         if self.instance and self.instance.is_locked:
             if "payment_spread_method" in attrs:
-                if attrs["payment_spread_method"] != self.instance.payment_spread_method:
+                if (
+                    attrs["payment_spread_method"]
+                    != self.instance.payment_spread_method
+                ):
                     raise serializers.ValidationError(
-                        {"payment_spread_method": "Cannot change spread method on a plan with active subscriptions."}
+                        {
+                            "payment_spread_method": "Cannot change spread method on a plan with active subscriptions."
+                        }
                     )
         return attrs
 
@@ -71,8 +104,13 @@ class PricingPlanCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = PricingPlan
         fields = [
-            "property", "plan_name", "land_size", "total_price",
-            "payment_type", "initial_payment", "duration_months",
+            "property",
+            "plan_name",
+            "land_size",
+            "total_price",
+            "payment_type",
+            "initial_payment",
+            "duration_months",
             "payment_spread_method",
         ]
 
@@ -80,7 +118,15 @@ class PricingPlanCreateSerializer(serializers.ModelSerializer):
 class PropertyAmenitySerializer(serializers.ModelSerializer):
     class Meta:
         model = PropertyAmenity
-        fields = ["id", "property", "name", "status", "description", "created_at", "updated_at"]
+        fields = [
+            "id",
+            "property",
+            "name",
+            "status",
+            "description",
+            "created_at",
+            "updated_at",
+        ]
         read_only_fields = ["id", "created_at", "updated_at"]
 
 
@@ -92,9 +138,14 @@ class PropertyDocumentSerializer(serializers.ModelSerializer):
     class Meta:
         model = PropertyDocument
         fields = [
-            "id", "property", "document_type", "document_type_display",
-            "status", "document_file", "notes",
-            "created_at", "updated_at",
+            "id",
+            "document_type",
+            "document_type_display",
+            "status",
+            "document_file",
+            "notes",
+            "created_at",
+            "updated_at",
         ]
         read_only_fields = ["id", "document_type_display", "created_at", "updated_at"]
 
@@ -102,7 +153,7 @@ class PropertyDocumentSerializer(serializers.ModelSerializer):
 class PropertyGallerySerializer(serializers.ModelSerializer):
     class Meta:
         model = PropertyGallery
-        fields = ["id", "property", "image", "caption", "order", "created_at"]
+        fields = ["id", "image", "caption", "order", "created_at"]
         read_only_fields = ["id", "created_at"]
 
 
@@ -110,6 +161,7 @@ class PropertyGallerySerializer(serializers.ModelSerializer):
 # Nested write serializers (used inside PropertyCreateSerializer)
 # These omit the `property` FK — it is set automatically during creation.
 # ---------------------------------------------------------------------------
+
 
 class _AmenityNestedSerializer(serializers.ModelSerializer):
     class Meta:
@@ -127,8 +179,12 @@ class _PricingPlanNestedSerializer(serializers.ModelSerializer):
     class Meta:
         model = PricingPlan
         fields = [
-            "plan_name", "land_size", "total_price",
-            "payment_type", "initial_payment", "duration_months",
+            "plan_name",
+            "land_size",
+            "total_price",
+            "payment_type",
+            "initial_payment",
+            "duration_months",
             "payment_spread_method",
         ]
 
@@ -143,6 +199,7 @@ class _BankAccountNestedSerializer(serializers.ModelSerializer):
 # List / detail serializers
 # ---------------------------------------------------------------------------
 
+
 class PropertyListSerializer(serializers.ModelSerializer):
     """Property listing with minimal related data."""
 
@@ -152,10 +209,18 @@ class PropertyListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Property
         fields = [
-            "id", "name", "property_type", "description",
-            "total_sqms", "unit_measurement", "status",
-            "featured_image", "location", "pricing_plans_count",
-            "created_at", "updated_at",
+            "id",
+            "name",
+            "property_type",
+            "description",
+            "total_sqms",
+            "unit_measurement",
+            "status",
+            "featured_image",
+            "location",
+            "pricing_plans_count",
+            "created_at",
+            "updated_at",
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
 
@@ -174,32 +239,46 @@ class PropertyDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Property
         fields = [
-            "id", "name", "property_type", "description",
-            "total_sqms", "unit_measurement", "status",
-            "featured_image", "location",
-            "gallery_images", "pricing_plans", "bank_accounts",
-            "amenities", "documents",
+            "id",
+            "name",
+            "property_type",
+            "description",
+            "total_sqms",
+            "unit_measurement",
+            "status",
+            "featured_image",
+            "location",
+            "gallery_images",
+            "pricing_plans",
+            "bank_accounts",
+            "amenities",
+            "documents",
             # Commission overrides (null → use workspace default)
             "commission_override_starter",
             "commission_override_senior",
             "commission_override_legend",
             # Workspace defaults shown alongside for context
             "commission_defaults",
-            "created_at", "updated_at",
+            "created_at",
+            "updated_at",
         ]
         read_only_fields = [
-            "id", "commission_defaults", "created_at", "updated_at",
+            "id",
+            "commission_defaults",
+            "created_at",
+            "updated_at",
         ]
 
     def get_commission_defaults(self, obj):
         """Return workspace-level default commission rates."""
         from core.models import WorkspaceSettings
+
         try:
             ws = WorkspaceSettings.objects.get(workspace=obj.workspace)
             return {
                 "starter": str(ws.commission_starter_pct),
-                "senior":  str(ws.commission_senior_pct),
-                "legend":  str(ws.commission_legend_pct),
+                "senior": str(ws.commission_senior_pct),
+                "legend": str(ws.commission_legend_pct),
             }
         except WorkspaceSettings.DoesNotExist:
             return {"starter": "0.00", "senior": "0.00", "legend": "0.00"}
@@ -208,6 +287,7 @@ class PropertyDetailSerializer(serializers.ModelSerializer):
 # ---------------------------------------------------------------------------
 # Create / update serializer  (all stepper fields in one request)
 # ---------------------------------------------------------------------------
+
 
 class PropertyCreateSerializer(serializers.ModelSerializer):
     """
@@ -225,26 +305,37 @@ class PropertyCreateSerializer(serializers.ModelSerializer):
     POST /api/v1/properties/gallery/ because they are multipart uploads.
     """
 
-    location     = PropertyLocationSerializer(required=False)
-    amenities    = _AmenityNestedSerializer(many=True, required=False, default=list)
-    documents    = _DocumentNestedSerializer(many=True, required=False, default=list)
-    pricing_plans = _PricingPlanNestedSerializer(many=True, required=False, default=list)
-    bank_accounts = _BankAccountNestedSerializer(many=True, required=False, default=list)
+    location = PropertyLocationSerializer(required=False)
+    amenities = _AmenityNestedSerializer(many=True, required=False, default=list)
+    documents = _DocumentNestedSerializer(many=True, required=False, default=list)
+    pricing_plans = _PricingPlanNestedSerializer(
+        many=True, required=False, default=list
+    )
+    bank_accounts = _BankAccountNestedSerializer(
+        many=True, required=False, default=list
+    )
 
     class Meta:
         model = Property
         fields = [
-            "name", "property_type", "description",
-            "total_sqms", "unit_measurement", "featured_image",
+            "name",
+            "property_type",
+            "description",
+            "total_sqms",
+            "unit_measurement",
+            "featured_image",
             "location",
-            "amenities", "documents", "pricing_plans", "bank_accounts",
+            "amenities",
+            "documents",
+            "pricing_plans",
+            "bank_accounts",
         ]
 
     @transaction.atomic
     def create(self, validated_data):
-        location_data     = validated_data.pop("location", None)
-        amenities_data    = validated_data.pop("amenities", [])
-        documents_data    = validated_data.pop("documents", [])
+        location_data = validated_data.pop("location", None)
+        amenities_data = validated_data.pop("amenities", [])
+        documents_data = validated_data.pop("documents", [])
         pricing_plans_data = validated_data.pop("pricing_plans", [])
         bank_accounts_data = validated_data.pop("bank_accounts", [])
 
@@ -281,8 +372,8 @@ class PropertyCreateSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         location_data = validated_data.pop("location", None)
         # On PATCH the nested lists are replaced only when explicitly provided.
-        amenities_data    = validated_data.pop("amenities", None)
-        documents_data    = validated_data.pop("documents", None)
+        amenities_data = validated_data.pop("amenities", None)
+        documents_data = validated_data.pop("documents", None)
         pricing_plans_data = validated_data.pop("pricing_plans", None)
         bank_accounts_data = validated_data.pop("bank_accounts", None)
 

@@ -216,6 +216,53 @@ class OTPService:
             raise ValueError("No user account found for this email.")
 
 
+    @staticmethod
+    def verify_otp_for_portal(code, email="", phone=""):
+        """
+        Verify an OTP for the customer self-service portal.
+
+        Unlike verify_otp(), this does NOT look up a User record — it only
+        validates the OTP token. The caller is responsible for fetching the
+        Customer and creating a portal session.
+
+        Raises ValueError on failure (invalid, expired, locked).
+        """
+        from django.db.models import Q
+
+        if not email and not phone:
+            raise ValueError("Email or phone is required for verification.")
+
+        lookup = Q(is_used=False)
+        if email:
+            lookup &= Q(email=email)
+        if phone:
+            lookup &= Q(phone=phone)
+
+        otp = OTPToken.objects.filter(lookup).order_by("-created_at").first()
+
+        if not otp:
+            raise ValueError("No pending OTP found. Please request a new one.")
+
+        if otp.is_locked:
+            raise ValueError("Account locked due to too many failed attempts. Try again later.")
+
+        if otp.is_expired:
+            raise ValueError("OTP has expired. Please request a new one.")
+
+        if otp.code != code:
+            otp.attempts += 1
+            if otp.attempts >= settings.OTP_MAX_ATTEMPTS:
+                otp.locked_until = timezone.now() + timedelta(
+                    minutes=settings.OTP_LOCKOUT_MINUTES
+                )
+            otp.save()
+            remaining = max(settings.OTP_MAX_ATTEMPTS - otp.attempts, 0)
+            raise ValueError(f"Invalid OTP. {remaining} attempt(s) remaining.")
+
+        otp.is_used = True
+        otp.save(update_fields=["is_used"])
+
+
 class WorkspaceService:
     """Handles workspace-related business logic."""
 
