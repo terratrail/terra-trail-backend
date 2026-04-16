@@ -4,7 +4,7 @@ Core URL configuration.
 
 from django.urls import path
 from core.views import (
-    WorkspaceCreateView, MyWorkspacesView, WorkspaceDetailView,
+    WorkspaceCreateView, WorkspaceSlugCheckView, MyWorkspacesView, WorkspaceDetailView,
     WorkspaceSettingsView, WorkspaceActivityListView, WorkspaceMembersListView,
     InviteMemberView, PlanListView, SelectPlanView, PlanUsageView,
 )
@@ -13,6 +13,7 @@ app_name = "core"
 
 urlpatterns = [
     path("create/", WorkspaceCreateView.as_view(), name="workspace-create"),
+    path("check-slug/", WorkspaceSlugCheckView.as_view(), name="workspace-check-slug"),
     path("mine/", MyWorkspacesView.as_view(), name="workspace-list"),
     path("detail/", WorkspaceDetailView.as_view(), name="workspace-detail"),
     path("settings/", WorkspaceSettingsView.as_view(), name="workspace-settings"),

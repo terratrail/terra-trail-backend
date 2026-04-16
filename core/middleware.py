@@ -18,8 +18,10 @@ PUBLIC_PATHS = [
     r"^/api/v1/auth/",
     r"^/api/v1/workspaces/create/?$",
     r"^/api/v1/workspaces/mine/?$",
+    r"^/api/v1/workspaces/check-slug/?",
     r"^/api/v1/docs/",
     r"^/api/v1/redoc/",
+    r"^/docs.json/",
     r"^/swagger",
     r"^/static/",
     r"^/media/",
@@ -43,8 +45,11 @@ class WorkspaceMiddleware:
         if self._is_public(request.path):
             return self.get_response(request)
 
-        # Strategy 1: Header
-        workspace_slug = request.headers.get("X-Workspace", "").strip()
+        # Strategy 1: Header — accept both X-Workspace-Slug and X-Workspace
+        workspace_slug = (
+            request.headers.get("X-Workspace-Slug", "").strip()
+            or request.headers.get("X-Workspace", "").strip()
+        )
 
         # Strategy 2: Subdomain fallback
         if not workspace_slug:
@@ -52,7 +57,7 @@ class WorkspaceMiddleware:
 
         if not workspace_slug:
             return JsonResponse(
-                {"message": "Workspace context required. Provide X-Workspace header."},
+                {"message": "Workspace context required. Provide X-Workspace-Slug header."},
                 status=400,
             )
 
@@ -74,13 +79,13 @@ class WorkspaceMiddleware:
         """Extract workspace slug from subdomain."""
         host = request.get_host().split(":")[0].lower()
         parts = host.split(".")
-        
+
         # Handle acme.localhost
         if len(parts) == 2 and parts[1] == "localhost":
             return parts[0]
-            
+
         # Handle acme.terratrail.io
         if len(parts) >= 3:
             return parts[0]
-            
+
         return None

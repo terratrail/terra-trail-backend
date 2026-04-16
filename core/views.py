@@ -3,6 +3,7 @@ Core views — Workspace management endpoints.
 """
 
 from django.utils.decorators import method_decorator
+from django.utils.text import slugify
 from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -50,6 +51,38 @@ class WorkspaceCreateView(generics.CreateAPIView):
             user=self.request.user, **serializer.validated_data
         )
         serializer.instance = workspace
+
+
+class WorkspaceSlugCheckView(APIView):
+    """
+    GET /api/v1/workspaces/check-slug/?slug=my-company
+
+    Returns availability of a workspace slug and suggestions if taken.
+    Authentication required so bots can't enumerate slugs freely.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        raw = request.query_params.get("slug", "").strip()
+        if not raw:
+            return Response({"error": "slug query param is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        slug = slugify(raw)
+        if not slug:
+            return Response({"error": "Invalid slug."}, status=status.HTTP_400_BAD_REQUEST)
+
+        available = not Workspace.objects.filter(slug=slug).exists()
+        suggestions = []
+        if not available:
+            for i in range(2, 6):
+                candidate = f"{slug}-{i}"
+                if not Workspace.objects.filter(slug=candidate).exists():
+                    suggestions.append(candidate)
+                if len(suggestions) == 3:
+                    break
+
+        return Response({"slug": slug, "available": available, "suggestions": suggestions})
 
 
 class MyWorkspacesView(APIView):

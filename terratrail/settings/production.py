@@ -1,8 +1,10 @@
 """
 TerraTrail — Production settings.
+Optimised for Render.com deployment.
 """
 
 from decouple import config
+import dj_database_url
 
 # ---------------------------------------------------------------------------
 # Security
@@ -14,35 +16,24 @@ SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 X_FRAME_OPTIONS = "DENY"
 SECURE_SSL_REDIRECT = config("SECURE_SSL_REDIRECT", default=True, cast=bool)
+SECURE_HSTS_SECONDS = 31536000
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+SECURE_HSTS_PRELOAD = True
 
 # ---------------------------------------------------------------------------
-# Database — PostgreSQL in production
+# Database — PostgreSQL via DATABASE_URL (Render provides this automatically)
 # ---------------------------------------------------------------------------
-
-import dj_database_url
 
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": config("DB_NAME", default="terratrail"),
-        "USER": config("DB_USER", default="terratrail"),
-        "PASSWORD": config("DB_PASSWORD", default=""),
-        "HOST": config("DB_HOST", default="localhost"),
-        "PORT": config("DB_PORT", default="5432"),
-        "CONN_MAX_AGE": 600,
-        "OPTIONS": {
-            "connect_timeout": 10,
-        },
-    }
+    "default": dj_database_url.config(
+        default=config(
+            "DATABASE_URL",
+            default=f"postgresql://{config('DB_USER', default='terratrail')}:{config('DB_PASSWORD', default='')}@{config('DB_HOST', default='localhost')}:{config('DB_PORT', default='5432')}/{config('DB_NAME', default='terratrail')}",
+        ),
+        conn_max_age=600,
+        conn_health_checks=True,
+    )
 }
-
-# DATABASES = {
-#     "default": dj_database_url.config(
-#         default=config("DATABASE_URL", default="postgres://localhost/terratrail"),
-#         conn_max_age=600,
-#         conn_health_checks=True,
-#     )
-# }
 
 # ---------------------------------------------------------------------------
 # Storage — S3
@@ -61,5 +52,43 @@ STORAGES = {
     },
     "staticfiles": {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
+
+# ---------------------------------------------------------------------------
+# Logging — stdout only (Render captures stdout; file paths don't persist)
+# ---------------------------------------------------------------------------
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "{levelname} {asctime} [{name}:{lineno}] {message}",
+            "style": "{",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "verbose",
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": "WARNING",
+    },
+    "loggers": {
+        "django": {"handlers": ["console"], "level": "WARNING", "propagate": False},
+        "django.request": {"handlers": ["console"], "level": "ERROR", "propagate": False},
+        "terratrail": {"handlers": ["console"], "level": "INFO", "propagate": False},
+        "core": {"handlers": ["console"], "level": "INFO", "propagate": False},
+        "accounts": {"handlers": ["console"], "level": "INFO", "propagate": False},
+        "properties": {"handlers": ["console"], "level": "INFO", "propagate": False},
+        "customers": {"handlers": ["console"], "level": "INFO", "propagate": False},
+        "payments": {"handlers": ["console"], "level": "INFO", "propagate": False},
+        "commissions": {"handlers": ["console"], "level": "INFO", "propagate": False},
+        "notifications": {"handlers": ["console"], "level": "INFO", "propagate": False},
+        "celery": {"handlers": ["console"], "level": "INFO", "propagate": False},
     },
 }

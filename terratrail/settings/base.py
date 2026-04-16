@@ -19,7 +19,23 @@ SECRET_KEY = config(
 
 DEBUG = config("DEBUG", default=False, cast=bool)
 
-ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="localhost,127.0.0.1,.localhost", cast=Csv())
+ALLOWED_HOSTS = config(
+    "ALLOWED_HOSTS", default="localhost,127.0.0.1,.localhost", cast=Csv()
+)
+
+# settings.py
+CORS_ALLOW_HEADERS = [
+    "accept",
+    "accept-encoding",
+    "authorization",
+    "content-type",
+    "dnt",
+    "origin",
+    "user-agent",
+    "x-csrftoken",
+    "x-requested-with",
+    "x-workspace-slug",  # Add this line
+]
 
 
 # ---------------------------------------------------------------------------
@@ -163,7 +179,6 @@ STORAGES = {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
     },
 }
-
 
 
 # ---------------------------------------------------------------------------

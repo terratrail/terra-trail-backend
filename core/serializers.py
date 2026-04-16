@@ -62,9 +62,21 @@ class WorkspaceInvitationSerializer(serializers.ModelSerializer):
 class WorkspaceCreateSerializer(serializers.ModelSerializer):
     """Serializer for workspace creation."""
 
+    slug = serializers.SlugField(
+        max_length=255,
+        required=False,
+        allow_blank=True,
+        help_text="Custom workspace URL slug. Auto-generated from name if omitted.",
+    )
+
+    def validate_slug(self, value):
+        if value and Workspace.objects.filter(slug=value).exists():
+            raise serializers.ValidationError("This slug is already taken.")
+        return value
+
     class Meta:
         model = Workspace
-        fields = ["name", "timezone", "region", "support_email", "support_whatsapp"]
+        fields = ["name", "slug", "timezone", "region", "support_email", "support_whatsapp"]
 
 
 class WorkspaceMinimalSerializer(serializers.ModelSerializer):
