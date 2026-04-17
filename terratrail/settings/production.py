@@ -21,26 +21,30 @@ SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
 
 # ---------------------------------------------------------------------------
-# Database — PostgreSQL via DATABASE_URL (Render provides this automatically)
+# Database — PostgreSQL via DATABASE_URL
 # ---------------------------------------------------------------------------
+
+import os
+from decouple import config
+
+# Decouple will look at environment variables first, then your .env file
+db_url = config("DATABASE_URL", default=config("INTERNAL_DATABASE_URL", default=None))
 
 DATABASES = {
     "default": dj_database_url.config(
-        default=config("DATABASE_URL", default=None),
+        default=db_url,
         conn_max_age=600,
         conn_health_checks=True,
     )
 }
 
-# If DATABASE_URL is still not set (or parsing failed), fall back to SQLite for safety
-# or raise an error. Here we ensure it exists.
-if not DATABASES["default"]:
+if not DATABASES.get("default"):
     import sys
-
-    sys.stderr.write(
-        "CRITICAL: DATABASE_URL not found in environment. Check Render settings."
-    )
-    # For production, we usually want it to fail early if the DB is missing
+    sys.stderr.write("\n" + "="*50 + "\n")
+    sys.stderr.write("CRITICAL: DATABASE_URL not found!\n")
+    sys.stderr.write(f"Available Env Keys: {', '.join(os.environ.keys())}\n")
+    sys.stderr.write("Note: If running locally, check your .env file.\n")
+    sys.stderr.write("="*50 + "\n")
 
 # ---------------------------------------------------------------------------
 # Storage — S3

@@ -7,6 +7,10 @@
 # Exit immediately if a command exits with a non-zero status
 set -e
 
+echo "--- Starting Environment Debug ---"
+echo "Available Env keys: $(env | cut -d= -f1 | sort | tr '\n' ' ')"
+echo "---------------------------------"
+
 echo "--- Using Settings: $DJANGO_SETTINGS_MODULE ---"
 
 echo "--- Generating Migrations (In case of missing files) ---"
