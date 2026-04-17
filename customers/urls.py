@@ -11,6 +11,10 @@ from customers.views import (
     SubscriptionDetailView,
     SubscriptionListView,
 )
+from customers.site_inspection_views import (
+    SiteInspectionListCreateView,
+    SiteInspectionDetailView,
+)
 
 app_name = "customers"
 
@@ -26,4 +30,8 @@ urlpatterns = [
 
     # Installments
     path("installments/", InstallmentListView.as_view(), name="installment-list"),
+
+    # Site Inspections
+    path("site-inspections/", SiteInspectionListCreateView.as_view(), name="site-inspection-list"),
+    path("site-inspections/<uuid:id>/", SiteInspectionDetailView.as_view(), name="site-inspection-detail"),
 ]

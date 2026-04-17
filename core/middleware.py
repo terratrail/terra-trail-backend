@@ -21,6 +21,7 @@ PUBLIC_PATHS = [
     r"^/api/v1/workspaces/check-slug/?",
     r"^/api/v1/docs/",
     r"^/api/v1/redoc/",
+    r"^/api/v1/health/",
     r"^/docs.json/",
     r"^/swagger",
     r"^/static/",
@@ -57,7 +58,9 @@ class WorkspaceMiddleware:
 
         if not workspace_slug:
             return JsonResponse(
-                {"message": "Workspace context required. Provide X-Workspace-Slug header."},
+                {
+                    "message": "Workspace context required. Provide X-Workspace-Slug header."
+                },
                 status=400,
             )
 

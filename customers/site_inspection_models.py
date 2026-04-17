@@ -1,0 +1,85 @@
+"""
+SiteInspection model — tracks inspection request from prospective buyers.
+"""
+
+from django.db import models
+from core.models import WorkspaceScopedModel
+from properties.models import Property
+
+
+class SiteInspection(WorkspaceScopedModel):
+    """A site inspection request for a property."""
+
+    class InspectionType(models.TextChoices):
+        PHYSICAL = "PHYSICAL", "Physical"
+        VIRTUAL = "VIRTUAL", "Virtual"
+
+    class Category(models.TextChoices):
+        RESIDENTIAL = "RESIDENTIAL", "Residential"
+        COMMERCIAL = "COMMERCIAL", "Commercial"
+        FARM_LAND = "FARM_LAND", "Farm Land"
+
+    class Status(models.TextChoices):
+        PENDING = "PENDING", "Pending"
+        ATTENDED = "ATTENDED", "Attended"
+        CANCELLED = "CANCELLED", "Cancelled"
+
+    # Contact info
+    name = models.CharField(max_length=255)
+    email = models.EmailField()
+    phone = models.CharField(max_length=20)
+
+    # Property (optional FK — can be free-text if property not yet listed)
+    linked_property = models.ForeignKey(
+        Property,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="site_inspections",
+    )
+    property_name = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+        help_text="Free-text fallback when no FK property is linked.",
+    )
+
+    # Schedule
+    inspection_date = models.DateField()
+    inspection_time = models.TimeField(null=True, blank=True)
+
+    # Metadata
+    inspection_type = models.CharField(
+        max_length=20,
+        choices=InspectionType.choices,
+        default=InspectionType.PHYSICAL,
+    )
+    category = models.CharField(
+        max_length=20,
+        choices=Category.choices,
+        default=Category.RESIDENTIAL,
+    )
+    persons = models.PositiveSmallIntegerField(default=1)
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PENDING,
+    )
+    notes = models.TextField(blank=True, default="")
+
+    class Meta:
+        verbose_name = "Site Inspection"
+        verbose_name_plural = "Site Inspections"
+        ordering = ["-inspection_date", "-created_at"]
+        indexes = [
+            models.Index(fields=["workspace", "inspection_date"]),
+            models.Index(fields=["workspace", "status"]),
+        ]
+
+    def __str__(self):
+        prop = self.property.name if self.property else self.property_name
+        return f"{self.name} → {prop} on {self.inspection_date}"
+
+    @property
+    def attended(self):
+        return self.status == self.Status.ATTENDED

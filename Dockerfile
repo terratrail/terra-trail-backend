@@ -8,7 +8,8 @@ FROM python:3.13-slim
 # Set environment variables for Python
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    DJANGO_SETTINGS_MODULE=terratrail.settings.production
+    DJANGO_SETTINGS_MODULE=terratrail.settings \
+    DEBUG=False
 
 # Create and set the working directory
 WORKDIR /app

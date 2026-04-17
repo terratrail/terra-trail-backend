@@ -232,3 +232,6 @@ class CustomerPortalSession(TimeStampedModel):
     @property
     def is_expired(self):
         return timezone.now() > self.expires_at
+
+# Re-export SiteInspection so it lives under this app's models namespace
+from customers.site_inspection_models import SiteInspection  # noqa: F401,E402

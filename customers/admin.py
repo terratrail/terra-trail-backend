@@ -1,5 +1,6 @@
 from django.contrib import admin
 from customers.models import Customer, Installment, Subscription
+from customers.site_inspection_models import SiteInspection
 
 
 @admin.register(Customer)
@@ -28,3 +29,13 @@ class InstallmentAdmin(admin.ModelAdmin):
     ]
     list_filter = ["status"]
     search_fields = ["subscription__customer__full_name"]
+
+
+@admin.register(SiteInspection)
+class SiteInspectionAdmin(admin.ModelAdmin):
+    list_display = [
+        "name", "email", "phone", "property_name",
+        "inspection_date", "inspection_type", "persons", "status", "workspace",
+    ]
+    list_filter = ["status", "inspection_type", "category", "workspace"]
+    search_fields = ["name", "email", "phone", "property_name"]
