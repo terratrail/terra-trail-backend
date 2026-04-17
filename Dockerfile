@@ -30,6 +30,7 @@ RUN pip install --upgrade pip && \
 COPY . /app/
 
 # Collect static files — use base settings so no external services
+# RUN python manage.py collectstatic --noinput
 # (S3, PostgreSQL) are required at build time.
 RUN DJANGO_SETTINGS_MODULE=terratrail.settings.base python manage.py collectstatic --noinput
 
@@ -41,8 +42,5 @@ RUN useradd -m terratrailuser
 RUN chown -R terratrailuser:terratrailuser /app
 USER terratrailuser
 
-# Make the start script executable
-RUN chmod +x /app/scripts/start.sh
-
-# Start the application via the start script
-CMD ["/app/scripts/start.sh"]
+# Start the application using Gunicorn (production WSGI server)
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "3", "--threads", "2", "terratrail.wsgi:application"]
