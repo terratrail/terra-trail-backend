@@ -339,7 +339,10 @@ class PropertyCreateSerializer(serializers.ModelSerializer):
         pricing_plans_data = validated_data.pop("pricing_plans", [])
         bank_accounts_data = validated_data.pop("bank_accounts", [])
 
-        workspace = self.context["request"].workspace
+        # Pop workspace from validated_data — it is injected there by
+        # serializer.save(workspace=...) in the view; reading it again from
+        # context would cause a duplicate keyword-argument TypeError.
+        workspace = validated_data.pop("workspace", None) or self.context["request"].workspace
         property_obj = Property.objects.create(workspace=workspace, **validated_data)
 
         if location_data:

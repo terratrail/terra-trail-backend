@@ -10,7 +10,7 @@ services:
     name: terratrail-api
     runtime: python
     buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput
-    startCommand: gunicorn terratrail.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 120
+    startCommand: python manage.py migrate --noinput && python manage.py createsuperuser --noinput || true && gunicorn terratrail.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 120
     plan: free
     healthCheckPath: /api/v1/health/
     envVars:
@@ -34,6 +34,12 @@ services:
         value: "60"
       - key: JWT_REFRESH_TOKEN_LIFETIME_DAYS
         value: "7"
+      - key: DJANGO_SUPERUSER_USERNAME
+        value: "admin"
+      - key: DJANGO_SUPERUSER_EMAIL
+        value: "demiladebamgboye@gmail.com"
+      - key: DJANGO_SUPERUSER_PASSWORD
+        generateValue: true
       # Set these manually in Render dashboard:
       # AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_STORAGE_BUCKET_NAME
       # CELERY_BROKER_URL (Redis URL from Render Redis or Upstash)
