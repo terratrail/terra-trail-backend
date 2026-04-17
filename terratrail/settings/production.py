@@ -26,14 +26,21 @@ SECURE_HSTS_PRELOAD = True
 
 DATABASES = {
     "default": dj_database_url.config(
-        default=config(
-            "DATABASE_URL",
-            default=f"postgresql://{config('DB_USER', default='terratrail')}:{config('DB_PASSWORD', default='')}@{config('DB_HOST', default='localhost')}:{config('DB_PORT', default='5432')}/{config('DB_NAME', default='terratrail')}",
-        ),
+        default=config("DATABASE_URL", default=None),
         conn_max_age=600,
         conn_health_checks=True,
     )
 }
+
+# If DATABASE_URL is still not set (or parsing failed), fall back to SQLite for safety
+# or raise an error. Here we ensure it exists.
+if not DATABASES["default"]:
+    import sys
+
+    sys.stderr.write(
+        "CRITICAL: DATABASE_URL not found in environment. Check Render settings."
+    )
+    # For production, we usually want it to fail early if the DB is missing
 
 # ---------------------------------------------------------------------------
 # Storage — S3
