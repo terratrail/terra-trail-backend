@@ -30,9 +30,9 @@ RUN pip install --upgrade pip && \
 COPY . /app/
 
 # Collect static files — use base settings so no external services
-# RUN python manage.py collectstatic --noinput
+RUN python manage.py collectstatic --noinput
 # (S3, PostgreSQL) are required at build time.
-RUN DJANGO_SETTINGS_MODULE=terratrail.settings.base python manage.py collectstatic --noinput
+# RUN DJANGO_SETTINGS_MODULE=terratrail.settings.base python manage.py collectstatic --noinput
 
 # Expose the port Gunicorn will run on
 EXPOSE 8000
