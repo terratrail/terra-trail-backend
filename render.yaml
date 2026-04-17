@@ -10,7 +10,7 @@ services:
     name: terratrail-api
     runtime: python
     buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput --settings=terratrail.settings.base
-    startCommand: python manage.py migrate --noinput && python manage.py createsuperuser --noinput || true && gunicorn terratrail.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 120
+    startCommand: chmod +x scripts/start.sh && ./scripts/start.sh
     plan: free
     healthCheckPath: /api/v1/health/
     envVars:

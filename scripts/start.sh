@@ -7,6 +7,11 @@
 # Exit immediately if a command exits with a non-zero status
 set -e
 
+echo "--- Using Settings: $DJANGO_SETTINGS_MODULE ---"
+
+echo "--- Generating Migrations (In case of missing files) ---"
+python manage.py makemigrations --noinput
+
 echo "--- Running Migrations ---"
 python manage.py migrate --noinput
 
