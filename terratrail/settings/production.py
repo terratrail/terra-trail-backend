@@ -80,7 +80,11 @@ LOGGING = {
     },
     "loggers": {
         "django": {"handlers": ["console"], "level": "WARNING", "propagate": False},
-        "django.request": {"handlers": ["console"], "level": "ERROR", "propagate": False},
+        "django.request": {
+            "handlers": ["console"],
+            "level": "ERROR",
+            "propagate": False,
+        },
         "terratrail": {"handlers": ["console"], "level": "INFO", "propagate": False},
         "core": {"handlers": ["console"], "level": "INFO", "propagate": False},
         "accounts": {"handlers": ["console"], "level": "INFO", "propagate": False},
