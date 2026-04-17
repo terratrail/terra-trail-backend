@@ -9,7 +9,11 @@ FROM python:3.13-slim
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     DJANGO_SETTINGS_MODULE=terratrail.settings \
-    DEBUG=False
+    DEBUG=False \
+    DJANGO_SUPERUSER_USERNAME=admin \
+    DJANGO_SUPERUSER_EMAIL=demiladebamgboye@gmail.com \
+    DJANGO_SUPERUSER_PASSWORD=password$123 \
+    DATABASE_URL=postgresql://terratrail:LVGwNqbTPPutjRsRDNdnSaLw9D8bdGiJ@dpg-d7gmvgq8qa3s73cm38o0-a.oregon-postgres.render.com/terratrail
 
 # Create and set the working directory
 WORKDIR /app
@@ -42,5 +46,8 @@ RUN useradd -m terratrailuser
 RUN chown -R terratrailuser:terratrailuser /app
 USER terratrailuser
 
-# Start the application using Gunicorn (production WSGI server)
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "3", "--threads", "2", "terratrail.wsgi:application"]
+# Make the start script executable
+RUN chmod +x /app/scripts/start.sh
+
+# Start the application via the start script
+CMD ["/app/scripts/start.sh"]
