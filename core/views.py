@@ -225,24 +225,147 @@ class InviteMemberView(generics.CreateAPIView):
         import uuid
         from datetime import timedelta
         from django.utils import timezone
-        
+        from django.conf import settings as django_settings
+
         token = str(uuid.uuid4())
         expiry = timezone.now() + timedelta(days=7)
-        
-        serializer.save(
+
+        invitation = serializer.save(
             workspace=self.request.workspace,
             invited_by=self.request.user,
             token=token,
-            expires_at=expiry
+            expires_at=expiry,
         )
-        
+
+        # Send invite email
+        from notifications.services import NotificationService
+        frontend_base = getattr(django_settings, "FRONTEND_BASE_URL", "http://localhost:5173")
+        invite_url = f"{frontend_base}/accept-invite/{token}"
+        NotificationService.send_invite_email(
+            recipient=invitation.email,
+            invited_by_name=self.request.user.full_name or self.request.user.email,
+            workspace_name=self.request.workspace.name,
+            role=invitation.role,
+            invite_url=invite_url,
+        )
+
         # Log activity
         WorkspaceActivity.objects.create(
             workspace=self.request.workspace,
             actor=self.request.user,
-            action_text=f"generated an invite link for role '{serializer.validated_data['role']}'",
-            category="Workspace"
+            action_text=f"invited {invitation.email} as '{invitation.role}'",
+            category="Workspace",
         )
+
+
+class MyMembershipView(APIView):
+    """
+    GET /api/v1/workspaces/my-membership/
+
+    Returns the current user's role and status within the active workspace.
+    Used by the frontend to drive role-based navigation.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        try:
+            membership = WorkspaceMembership.objects.get(
+                user=request.user,
+                workspace=request.workspace,
+                is_active=True,
+            )
+            return Response({
+                "role": membership.role,
+                "is_active": membership.is_active,
+                "workspace_id": str(request.workspace.id),
+                "workspace_name": request.workspace.name,
+            })
+        except WorkspaceMembership.DoesNotExist:
+            return Response({"role": None}, status=status.HTTP_404_NOT_FOUND)
+
+
+class InviteDetailView(APIView):
+    """
+    GET /api/v1/workspaces/invites/<token>/
+
+    Public endpoint — returns invite metadata so the frontend can show a
+    preview before the user logs in or creates an account.
+    """
+
+    permission_classes = []
+
+    def get(self, request, token):
+        from core.models import WorkspaceInvitation
+
+        try:
+            invite = WorkspaceInvitation.objects.select_related("workspace").get(token=token)
+        except WorkspaceInvitation.DoesNotExist:
+            return Response({"detail": "Invitation not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        return Response({
+            "email": invite.email,
+            "role": invite.role,
+            "workspace_name": invite.workspace.name,
+            "workspace_slug": invite.workspace.slug,
+            "is_expired": invite.is_expired,
+            "is_accepted": invite.is_accepted,
+        })
+
+
+class AcceptInviteView(APIView):
+    """
+    POST /api/v1/workspaces/invites/<token>/accept/
+
+    Authenticated endpoint — validates the invite token and adds the
+    requesting user as a workspace member with the invited role.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, token):
+        from core.models import WorkspaceInvitation
+        from accounts.services import WorkspaceService
+
+        try:
+            invite = WorkspaceInvitation.objects.select_related("workspace").get(token=token)
+        except WorkspaceInvitation.DoesNotExist:
+            return Response({"detail": "Invitation not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        if invite.is_accepted:
+            return Response({"detail": "This invitation has already been used."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if invite.is_expired:
+            return Response({"detail": "This invitation has expired."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if invite.email.lower() != request.user.email.lower():
+            return Response(
+                {"detail": "This invitation was sent to a different email address."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        WorkspaceService.add_member(
+            workspace=invite.workspace,
+            user=request.user,
+            role=invite.role,
+        )
+
+        invite.is_accepted = True
+        invite.save(update_fields=["is_accepted"])
+
+        WorkspaceActivity.objects.create(
+            workspace=invite.workspace,
+            actor=request.user,
+            action_text=f"accepted invite and joined as '{invite.role}'",
+            category="Workspace",
+        )
+
+        return Response({
+            "detail": "You have joined the workspace.",
+            "workspace_slug": invite.workspace.slug,
+            "workspace_name": invite.workspace.name,
+            "role": invite.role,
+        })
 
 
 class WorkspaceHomeView(APIView):

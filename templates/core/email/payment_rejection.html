@@ -1,0 +1,35 @@
+{% extends "core/email/base_email.html" %}
+{% block subject %}Payment Rejected — {{ property_name }}{% endblock %}
+
+{% block body %}
+  <div style="text-align:center; margin-bottom:24px;">
+    <span class="badge-danger">&#10007; Payment Rejected</span>
+  </div>
+
+  <div class="email-title">Payment Could Not Be Processed</div>
+  <p class="email-text">
+    Dear {{ customer_name }},<br>
+    Unfortunately, your payment of <strong style="color:#f87171;">₦{{ amount }}</strong> for
+    <strong style="color:#e2e8f0;">{{ property_name }}</strong>
+    (Installment #{{ installment_number }}) has been rejected.
+  </p>
+
+  {% if reason %}
+  <div style="background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.2); border-radius:12px; padding:16px 20px; margin:20px 0;">
+    <div style="font-size:13px; color:#f87171; font-weight:600; margin-bottom:6px;">Reason</div>
+    <div style="font-size:14px; color:#fca5a5;">{{ reason }}</div>
+  </div>
+  {% endif %}
+
+  <p class="email-text">
+    Please resubmit a valid payment to keep your installment schedule on track.
+    If you believe this rejection is an error, please contact us.
+  </p>
+
+  <hr class="divider">
+
+  <p class="email-text" style="font-size:13px; color:#475569;">
+    Need assistance? Reach us at
+    <a href="mailto:{{ support_email }}" style="color:#818cf8;">{{ support_email }}</a>.
+  </p>
+{% endblock %}

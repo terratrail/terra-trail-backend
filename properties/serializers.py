@@ -30,6 +30,7 @@ class PropertyLocationSerializer(serializers.ModelSerializer):
             "state",
             "country",
             "postal_code",
+            "nearest_landmark",
             "latitude",
             "longitude",
         ]
@@ -214,6 +215,7 @@ class PropertyListSerializer(serializers.ModelSerializer):
             "property_type",
             "description",
             "total_sqms",
+            "available_units",
             "unit_measurement",
             "status",
             "featured_image",
@@ -244,6 +246,7 @@ class PropertyDetailSerializer(serializers.ModelSerializer):
             "property_type",
             "description",
             "total_sqms",
+            "available_units",
             "unit_measurement",
             "status",
             "featured_image",
@@ -318,11 +321,14 @@ class PropertyCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Property
         fields = [
+            "id",
             "name",
             "property_type",
             "description",
             "total_sqms",
+            "available_units",
             "unit_measurement",
+            "status",
             "featured_image",
             "location",
             "amenities",
@@ -330,6 +336,7 @@ class PropertyCreateSerializer(serializers.ModelSerializer):
             "pricing_plans",
             "bank_accounts",
         ]
+        read_only_fields = ["id"]
 
     @transaction.atomic
     def create(self, validated_data):

@@ -56,7 +56,7 @@ class WorkspaceInvitationSerializer(serializers.ModelSerializer):
             "id", "email", "role", "token", "invited_by_name",
             "expires_at", "is_accepted", "is_expired",
         ]
-        read_only_fields = ["id", "token", "invited_by_name", "is_accepted"]
+        read_only_fields = ["id", "token", "invited_by_name", "expires_at", "is_accepted", "is_expired"]
 
 
 class WorkspaceCreateSerializer(serializers.ModelSerializer):

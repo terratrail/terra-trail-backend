@@ -38,19 +38,8 @@ class AuthService:
             **extra_fields,
         )
 
-        # Trigger OTP for verification
-        code = OTPService.request_otp(email=user.email, phone=user.phone)
-
-        # In a real environment, we'd call an email task here.
-        # For now, it will log to console via the email backend.
-        from notifications.services import NotificationService
-
-        NotificationService.send_email(
-            workspace=None,  # System level
-            recipient=user.email,
-            subject="Verify your TerraTrail Account",
-            message=f"Your verification code is {code}. It expires in 10 minutes.",
-        )
+        # Trigger OTP — send_otp_email is called inside OTPService.request_otp
+        OTPService.request_otp(email=user.email, phone=user.phone)
 
         return user, None  # No tokens until verified
 
@@ -137,11 +126,9 @@ class OTPService:
         from notifications.services import NotificationService
 
         if email:
-            NotificationService.send_email(
-                workspace=None,
+            NotificationService.send_otp_email(
                 recipient=email,
-                subject="Your OTP Code",
-                message=f"Your OTP code is {code}. It expires in 10 minutes.",
+                code=code,
             )
         elif phone:
             NotificationService.send_sms(
@@ -314,21 +301,12 @@ class WorkspaceService:
             except _Workspace.DoesNotExist:
                 return
 
-            subject = f"Your workspace '{name}' is ready — {app_settings.COMPANY_NAME}"
-            message = (
-                f"Hi {user_name},\n\n"
-                f"Your workspace '{name}' has been created and is ready to use.\n\n"
-                f"Get started by inviting your team, adding your first property, "
-                f"and setting up your billing plan.\n\n"
-                f"Need help? Reach us at {app_settings.SUPPORT_EMAIL}.\n\n"
-                f"— The {app_settings.COMPANY_NAME} Team"
-            )
-
-            NotificationService.send_email(
-                workspace=_workspace,
+            NotificationService.send_welcome_email(
                 recipient=user_email,
-                subject=subject,
-                message=message,
+                user_name=user_name,
+                workspace_name=name,
+                workspace_region=getattr(_workspace, "region", ""),
+                support_email=app_settings.SUPPORT_EMAIL,
             )
 
         transaction.on_commit(_send_welcome)

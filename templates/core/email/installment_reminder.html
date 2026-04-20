@@ -1,0 +1,48 @@
+{% extends "core/email/base_email.html" %}
+{% block subject %}Payment Reminder — {{ property_name }}{% endblock %}
+
+{% block body %}
+  <div style="text-align:center; margin-bottom:24px;">
+    <span class="badge-warning">&#9888; Payment Reminder</span>
+  </div>
+
+  <div class="email-title">Upcoming Payment Due</div>
+  <p class="email-text">
+    Dear {{ customer_name }},<br>
+    This is a reminder that your installment payment for
+    <strong style="color:#e2e8f0;">{{ property_name }}</strong> is due
+    <strong style="color:{% if is_overdue %}#f87171{% else %}#fbbf24{% endif %};">{{ timing }}</strong>.
+  </p>
+
+  <div style="background:rgba(245,158,11,0.06); border:1px solid rgba(245,158,11,0.2); border-radius:14px; padding:4px; margin:20px 0;">
+    <table class="info-table">
+      <tr>
+        <td>Installment #</td>
+        <td>{{ installment_number }}</td>
+      </tr>
+      <tr>
+        <td>Amount Due</td>
+        <td style="color:#fbbf24; font-size:16px;">₦{{ amount }}</td>
+      </tr>
+      <tr>
+        <td>Due Date</td>
+        <td>{{ due_date }}</td>
+      </tr>
+    </table>
+  </div>
+
+  {% if is_overdue %}
+  <div style="background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.2); border-radius:12px; padding:14px 18px; margin:16px 0; font-size:14px; color:#fca5a5;">
+    &#9888; This payment is overdue. Please make payment immediately to avoid penalties.
+  </div>
+  {% endif %}
+
+  <p class="email-text">Please make your payment promptly to stay on track with your schedule.</p>
+
+  <hr class="divider">
+
+  <p class="email-text" style="font-size:13px; color:#475569;">
+    Questions? Contact {{ workspace_name }} support at
+    <a href="mailto:{{ support_email }}" style="color:#818cf8;">{{ support_email }}</a>.
+  </p>
+{% endblock %}

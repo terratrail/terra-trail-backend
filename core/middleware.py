@@ -15,6 +15,7 @@ from core.models import Workspace
 # URL patterns that do NOT require workspace context
 PUBLIC_PATHS = [
     r"^/admin/",
+    r"^/admin",
     r"^/api/v1/auth/",
     r"^/api/v1/workspaces/create/?$",
     r"^/api/v1/workspaces/mine/?$",
@@ -27,6 +28,8 @@ PUBLIC_PATHS = [
     r"^/static/",
     r"^/media/",
     r"^/$",
+    r"^/api/v1/workspaces/invites/[^/]+/?$",  # GET invite detail — public preview
+    r"^/api/v1/workspaces/invites/[^/]+/accept/?$",  # POST accept — workspace from token, not header
 ]
 
 

@@ -6,7 +6,8 @@ from django.urls import path
 from core.views import (
     WorkspaceCreateView, WorkspaceSlugCheckView, MyWorkspacesView, WorkspaceDetailView,
     WorkspaceSettingsView, WorkspaceActivityListView, WorkspaceMembersListView,
-    InviteMemberView, PlanListView, SelectPlanView, PlanUsageView,
+    InviteMemberView, InviteDetailView, AcceptInviteView, MyMembershipView,
+    PlanListView, SelectPlanView, PlanUsageView,
 )
 
 app_name = "core"
@@ -19,7 +20,10 @@ urlpatterns = [
     path("settings/", WorkspaceSettingsView.as_view(), name="workspace-settings"),
     path("activity/", WorkspaceActivityListView.as_view(), name="workspace-activity"),
     path("members/", WorkspaceMembersListView.as_view(), name="workspace-members"),
+    path("my-membership/", MyMembershipView.as_view(), name="workspace-my-membership"),
     path("invites/", InviteMemberView.as_view(), name="workspace-invites"),
+    path("invites/<str:token>/", InviteDetailView.as_view(), name="workspace-invite-detail"),
+    path("invites/<str:token>/accept/", AcceptInviteView.as_view(), name="workspace-invite-accept"),
 
     # Billing
     path("billing/plans/", PlanListView.as_view(), name="billing-plans"),

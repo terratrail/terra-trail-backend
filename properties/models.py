@@ -49,6 +49,10 @@ class Property(WorkspaceScopedModel):
     featured_image = models.ImageField(
         upload_to="properties/images/", blank=True, null=True
     )
+    available_units = models.PositiveIntegerField(
+        default=0,
+        help_text="Number of plots/units available for sale",
+    )
 
     # Commission overrides per tier — null means use workspace default
     commission_override_starter = models.DecimalField(
@@ -91,6 +95,7 @@ class PropertyLocation(WorkspaceScopedModel):
     state = models.CharField(max_length=100, blank=True, default="")
     country = models.CharField(max_length=100, default="Nigeria")
     postal_code = models.CharField(max_length=20, blank=True, default="")
+    nearest_landmark = models.CharField(max_length=255, blank=True, default="")
     latitude = models.DecimalField(
         max_digits=9, decimal_places=6, null=True, blank=True
     )
