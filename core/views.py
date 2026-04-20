@@ -281,8 +281,8 @@ class MyMembershipView(APIView):
                 "workspace_id": str(request.workspace.id),
                 "workspace_name": request.workspace.name,
             })
-        except WorkspaceMembership.DoesNotExist:
-            return Response({"role": None}, status=status.HTTP_404_NOT_FOUND)
+        except (WorkspaceMembership.DoesNotExist, Exception):
+            return Response({"role": None})
 
 
 class InviteDetailView(APIView):
