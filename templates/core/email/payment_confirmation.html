@@ -2,46 +2,45 @@
 {% block subject %}Payment Confirmed — {{ property_name }}{% endblock %}
 
 {% block body %}
-  <div style="text-align:center; margin-bottom:24px;">
+  <div style="text-align:center; margin-bottom:20px;">
     <span class="badge-success">&#10003; Payment Approved</span>
   </div>
 
-  <div class="email-title">Payment Confirmed</div>
+  <p class="email-title">Payment Confirmed</p>
   <p class="email-text">
     Dear {{ customer_name }},<br>
-    Your payment for <strong style="color:#e2e8f0;">{{ property_name }}</strong> has been approved.
-    Here's a summary of this transaction:
+    Your payment for <strong>{{ property_name }}</strong> has been approved.
+    Here is a summary of this transaction:
   </p>
 
-  <div style="background:rgba(16,185,129,0.06); border:1px solid rgba(16,185,129,0.2); border-radius:14px; padding:4px; margin:20px 0;">
-    <table class="info-table">
-      <tr>
-        <td>Amount Paid</td>
-        <td style="color:#34d399;">₦{{ amount }}</td>
-      </tr>
-      <tr>
-        <td>Installment #</td>
-        <td>{{ installment_number }}</td>
-      </tr>
-      <tr>
-        <td>Transaction Ref</td>
-        <td style="font-family:monospace; font-size:13px;">{{ transaction_reference }}</td>
-      </tr>
-      <tr>
-        <td>Total Paid So Far</td>
-        <td>₦{{ amount_paid }}</td>
-      </tr>
-      <tr>
-        <td>Outstanding Balance</td>
-        <td>₦{{ outstanding_balance }}</td>
-      </tr>
-    </table>
+  <div class="highlight-box">
+    <div class="amount">₦{{ amount }}</div>
+    <div class="label">Amount Approved — Installment #{{ installment_number }}</div>
   </div>
+
+  <table class="info-table">
+    <tr>
+      <td>Property</td>
+      <td>{{ property_name }}</td>
+    </tr>
+    <tr>
+      <td>Transaction Ref</td>
+      <td style="font-family:monospace; font-size:13px;">{{ transaction_reference }}</td>
+    </tr>
+    <tr>
+      <td>Total Paid So Far</td>
+      <td>₦{{ amount_paid }}</td>
+    </tr>
+    <tr>
+      <td>Outstanding Balance</td>
+      <td>₦{{ outstanding_balance }}</td>
+    </tr>
+  </table>
 
   <hr class="divider">
 
-  <p class="email-text" style="font-size:13px; color:#475569;">
-    Thank you for your continued trust in {{ workspace_name }}.
+  <p class="email-text" style="font-size:13px; color:#6b7280;">
+    Thank you for your continued trust in <strong>{{ workspace_name }}</strong>.
     Please keep this email as your receipt.
   </p>
 {% endblock %}

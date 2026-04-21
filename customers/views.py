@@ -18,6 +18,7 @@ from customers.models import Customer, Installment, Subscription
 from customers.serializers import (
     CustomerCreateSerializer,
     CustomerDetailSerializer,
+    CustomerListSerializer,
     CustomerSerializer,
     InstallmentSerializer,
     SubscriptionListSerializer,
@@ -46,11 +47,13 @@ class CustomerListCreateView(generics.ListCreateAPIView):
     def get_serializer_class(self):
         if self.request.method == "POST":
             return CustomerCreateSerializer
-        return CustomerSerializer
+        return CustomerListSerializer
 
     def get_queryset(self):
-        return Customer.objects.filter(workspace=self.request.workspace).order_by(
-            "-created_at"
+        return (
+            Customer.objects.filter(workspace=self.request.workspace)
+            .prefetch_related("subscriptions__pricing_plan", "subscriptions__installments", "subscriptions__property")
+            .order_by("-created_at")
         )
 
     @swagger_auto_schema(

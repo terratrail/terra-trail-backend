@@ -1,0 +1,46 @@
+{% extends "core/email/base_email.html" %}
+{% block subject %}You're invited to join {{ workspace_name }} — TerraTrail{% endblock %}
+
+{% block body %}
+  <div class="email-title">You're Invited!</div>
+  <p class="email-text">
+    Hi there,<br>
+    <strong style="color:#e2e8f0;">{{ invited_by_name }}</strong> has invited you to join
+    <strong style="color:#e2e8f0;">{{ workspace_name }}</strong> on TerraTrail as
+    <span class="badge-success">{{ role_label }}</span>.
+  </p>
+
+  <table class="info-table">
+    <tr>
+      <td>Workspace</td>
+      <td>{{ workspace_name }}</td>
+    </tr>
+    <tr>
+      <td>Your Role</td>
+      <td>{{ role_label }}</td>
+    </tr>
+    <tr>
+      <td>Invited By</td>
+      <td>{{ invited_by_name }}</td>
+    </tr>
+    <tr>
+      <td>Expires In</td>
+      <td>{{ expires_days }} days</td>
+    </tr>
+  </table>
+
+  <div style="text-align:center; margin: 28px 0;">
+    <a href="{{ invite_url }}" class="btn-primary-email">Accept Invitation</a>
+  </div>
+
+  <hr class="divider">
+
+  <p class="email-text" style="font-size:13px; color:#475569;">
+    Or copy and paste this link into your browser:<br>
+    <a href="{{ invite_url }}" style="color:#a78bfa; word-break:break-all;">{{ invite_url }}</a>
+  </p>
+
+  <p class="email-text" style="font-size:13px; color:#475569;">
+    If you didn't expect this invitation, you can safely ignore this email.
+  </p>
+{% endblock %}

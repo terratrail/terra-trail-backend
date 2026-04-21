@@ -7,6 +7,65 @@ from customers.models import Customer, Installment, Subscription
 from properties.serializers import PricingPlanSerializer
 
 
+class CustomerListSerializer(serializers.ModelSerializer):
+    """Customer list representation with primary subscription summary."""
+
+    primary_subscription = serializers.SerializerMethodField()
+    active_subscriptions = serializers.SerializerMethodField()
+    completed_subscriptions = serializers.SerializerMethodField()
+    defaulting_subscriptions = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Customer
+        fields = [
+            "id", "full_name", "email", "phone", "address",
+            "referral_source", "referral_code",
+            "primary_subscription",
+            "active_subscriptions", "completed_subscriptions", "defaulting_subscriptions",
+            "created_at",
+        ]
+        read_only_fields = fields
+
+    def _subs(self, obj):
+        if not hasattr(obj, "_subscription_cache"):
+            obj._subscription_cache = list(obj.subscriptions.select_related(
+                "property", "pricing_plan"
+            ).order_by("-created_at"))
+        return obj._subscription_cache
+
+    def get_primary_subscription(self, obj):
+        subs = self._subs(obj)
+        sub = next((s for s in subs if s.status == "ACTIVE"), None) or (subs[0] if subs else None)
+        if not sub:
+            return None
+        next_installment = (
+            sub.installments.filter(status__in=["UPCOMING", "DUE", "OVERDUE"])
+            .order_by("due_date").first()
+        )
+        return {
+            "id": str(sub.id),
+            "property_name": sub.property.name if sub.property else "",
+            "land_size": getattr(sub.pricing_plan, "land_size", "") if sub.pricing_plan else "",
+            "plan_name": sub.pricing_plan.plan_name if sub.pricing_plan else "",
+            "payment_type": sub.pricing_plan.payment_type if sub.pricing_plan else "",
+            "locked_price": str(sub.total_price),
+            "amount_paid": str(sub.amount_paid),
+            "balance": str(sub.balance),
+            "status": sub.status,
+            "next_due_date": str(next_installment.due_date) if next_installment else None,
+            "next_due_amount": str(next_installment.amount) if next_installment else None,
+        }
+
+    def get_active_subscriptions(self, obj):
+        return sum(1 for s in self._subs(obj) if s.status == "ACTIVE")
+
+    def get_completed_subscriptions(self, obj):
+        return sum(1 for s in self._subs(obj) if s.status == "COMPLETED")
+
+    def get_defaulting_subscriptions(self, obj):
+        return sum(1 for s in self._subs(obj) if s.status == "DEFAULTING")
+
+
 class CustomerSerializer(serializers.ModelSerializer):
     """Full customer representation."""
 

@@ -27,6 +27,7 @@ from properties.serializers import (
     PropertyDocumentSerializer,
     PropertyGallerySerializer,
     PropertyListSerializer,
+    PublicPropertySerializer,
 )
 from properties.services import PricingPlanService, PropertyService
 
@@ -399,3 +400,60 @@ class PropertyGalleryDetailView(generics.RetrieveUpdateDestroyAPIView):
 
     def get_queryset(self):
         return PropertyGallery.objects.filter(workspace=self.request.workspace)
+
+
+# ---------------------------------------------------------------------------
+# Public (unauthenticated) endpoints
+# ---------------------------------------------------------------------------
+
+
+class PublicPropertyListView(APIView):
+    """
+    GET /api/v1/public/<workspace_slug>/properties/
+    No auth required — returns PUBLISHED properties for the workspace.
+    """
+
+    permission_classes = []
+
+    def get(self, request, workspace_slug):
+        from core.models import Workspace
+        try:
+            workspace = Workspace.objects.get(slug=workspace_slug, is_active=True)
+        except Workspace.DoesNotExist:
+            return Response({"detail": "Workspace not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        qs = (
+            Property.objects.filter(workspace=workspace, status="PUBLISHED")
+            .select_related("location")
+            .prefetch_related("pricing_plans", "gallery_images", "amenities")
+            .order_by("-created_at")
+        )
+        return Response(PublicPropertySerializer(qs, many=True, context={"request": request}).data)
+
+
+class PublicPropertyDetailView(APIView):
+    """
+    GET /api/v1/public/<workspace_slug>/properties/<id>/
+    No auth required — returns a single PUBLISHED property.
+    """
+
+    permission_classes = []
+
+    def get(self, request, workspace_slug, id):
+        from core.models import Workspace
+        try:
+            workspace = Workspace.objects.get(slug=workspace_slug, is_active=True)
+        except Workspace.DoesNotExist:
+            return Response({"detail": "Workspace not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            prop = (
+                Property.objects.filter(workspace=workspace, status="PUBLISHED")
+                .select_related("location")
+                .prefetch_related("pricing_plans", "gallery_images", "amenities")
+                .get(id=id)
+            )
+        except Property.DoesNotExist:
+            return Response({"detail": "Property not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        return Response(PublicPropertySerializer(prop, context={"request": request}).data)

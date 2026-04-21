@@ -4,42 +4,44 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block subject %}TerraTrail{% endblock %}</title>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
-    body {
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+
+    body, html {
       margin: 0;
       padding: 0;
-      background-color: #0f172a;
-      font-family: 'Outfit', Arial, sans-serif;
-      color: #e2e8f0;
+      background-color: #f3f4f6;
+      font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+      -webkit-text-size-adjust: 100%;
+      color: #111827;
     }
     .email-wrapper {
-      background-color: #0f172a;
+      background-color: #f3f4f6;
       padding: 40px 16px;
     }
     .email-card {
       max-width: 560px;
       margin: 0 auto;
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 20px;
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 16px;
       overflow: hidden;
     }
     .email-header {
-      background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
-      padding: 32px 40px;
+      background: #059669;
+      padding: 28px 40px;
       text-align: center;
     }
     .email-header .brand {
       font-size: 22px;
       font-weight: 700;
       color: #ffffff;
-      letter-spacing: -0.5px;
+      letter-spacing: -0.3px;
     }
-    .email-header .brand span {
-      opacity: 0.85;
-      font-weight: 300;
+    .email-header .brand-sub {
+      font-size: 12px;
+      color: rgba(255,255,255,0.75);
+      margin-top: 3px;
     }
     .email-body {
       padding: 36px 40px;
@@ -47,116 +49,148 @@
     .email-title {
       font-size: 22px;
       font-weight: 700;
-      color: #f1f5f9;
-      margin-bottom: 12px;
+      color: #111827;
+      margin: 0 0 12px;
     }
     .email-text {
       font-size: 15px;
-      color: #94a3b8;
+      color: #374151;
       line-height: 1.7;
-      margin-bottom: 16px;
+      margin: 0 0 16px;
     }
     .btn-primary-email {
       display: inline-block;
-      background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+      background: #059669;
       color: #ffffff !important;
       text-decoration: none;
       font-weight: 600;
       font-size: 15px;
       padding: 14px 32px;
-      border-radius: 12px;
+      border-radius: 10px;
       margin: 20px 0;
+      border: none;
+    }
+    .btn-primary-email:hover {
+      background: #047857;
     }
     .divider {
       border: none;
-      border-top: 1px solid rgba(255,255,255,0.08);
+      border-top: 1px solid #e5e7eb;
       margin: 24px 0;
     }
     .otp-box {
-      background: rgba(99,102,241,0.12);
-      border: 2px solid rgba(99,102,241,0.4);
-      border-radius: 14px;
+      background: #f0fdf4;
+      border: 2px solid #bbf7d0;
+      border-radius: 12px;
       text-align: center;
       padding: 24px;
       margin: 20px 0;
     }
     .otp-code {
-      font-size: 42px;
+      font-size: 44px;
       font-weight: 700;
-      letter-spacing: 10px;
-      color: #a78bfa;
+      letter-spacing: 12px;
+      color: #059669;
     }
     .otp-expire {
       font-size: 13px;
-      color: #64748b;
+      color: #6b7280;
       margin-top: 8px;
     }
     .info-table {
       width: 100%;
       border-collapse: collapse;
       margin: 16px 0;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      overflow: hidden;
     }
     .info-table td {
-      padding: 10px 14px;
+      padding: 11px 16px;
       font-size: 14px;
-      border-bottom: 1px solid rgba(255,255,255,0.06);
+      border-bottom: 1px solid #f3f4f6;
+      color: #111827;
+    }
+    .info-table tr:last-child td {
+      border-bottom: none;
     }
     .info-table td:first-child {
-      color: #64748b;
-      width: 42%;
+      color: #6b7280;
+      font-weight: 500;
+      width: 40%;
+      background: #f9fafb;
     }
     .info-table td:last-child {
-      color: #e2e8f0;
+      color: #111827;
       font-weight: 600;
     }
     .badge-success {
-      background: rgba(16,185,129,0.15);
-      color: #34d399;
-      border: 1px solid rgba(16,185,129,0.3);
+      background: #dcfce7;
+      color: #166534;
+      border: 1px solid #bbf7d0;
       border-radius: 20px;
-      padding: 4px 14px;
+      padding: 4px 12px;
       font-size: 13px;
       font-weight: 600;
       display: inline-block;
     }
     .badge-danger {
-      background: rgba(239,68,68,0.15);
-      color: #f87171;
-      border: 1px solid rgba(239,68,68,0.3);
+      background: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #fecaca;
       border-radius: 20px;
-      padding: 4px 14px;
+      padding: 4px 12px;
       font-size: 13px;
       font-weight: 600;
       display: inline-block;
     }
     .badge-warning {
-      background: rgba(245,158,11,0.15);
-      color: #fbbf24;
-      border: 1px solid rgba(245,158,11,0.3);
+      background: #fef3c7;
+      color: #92400e;
+      border: 1px solid #fde68a;
       border-radius: 20px;
-      padding: 4px 14px;
+      padding: 4px 12px;
       font-size: 13px;
       font-weight: 600;
       display: inline-block;
     }
+    .highlight-box {
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-left: 4px solid #059669;
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin: 16px 0;
+    }
+    .highlight-box .amount {
+      font-size: 26px;
+      font-weight: 700;
+      color: #059669;
+    }
+    .highlight-box .label {
+      font-size: 13px;
+      color: #6b7280;
+      margin-top: 2px;
+    }
     .email-footer {
-      background: rgba(0,0,0,0.2);
-      padding: 24px 40px;
+      background: #f9fafb;
+      border-top: 1px solid #e5e7eb;
+      padding: 20px 40px;
       text-align: center;
     }
     .email-footer p {
       font-size: 12px;
-      color: #475569;
+      color: #9ca3af;
       margin: 0;
       line-height: 1.6;
     }
     .email-footer a {
-      color: #6366f1;
+      color: #059669;
       text-decoration: none;
     }
     @media (max-width: 600px) {
       .email-body, .email-header, .email-footer { padding: 24px 20px; }
-      .otp-code { font-size: 32px; letter-spacing: 6px; }
+      .otp-code { font-size: 32px; letter-spacing: 8px; }
     }
   </style>
 </head>
@@ -164,9 +198,9 @@
   <div class="email-wrapper">
     <div class="email-card">
       <div class="email-header">
-        <div class="brand">Terra<span>Trail</span></div>
+        <div class="brand">🌿 TerraTrail</div>
         {% if workspace_name %}
-        <div style="font-size:13px; color:rgba(255,255,255,0.7); margin-top:4px;">{{ workspace_name }}</div>
+        <div class="brand-sub">{{ workspace_name }}</div>
         {% endif %}
       </div>
 
@@ -176,9 +210,9 @@
 
       <div class="email-footer">
         <p>
-          &copy; {{ year }} TerraTrail SaaS &mdash; All rights reserved.<br>
+          &copy; {{ year }} TerraTrail &mdash; Real Estate Management Platform<br>
           {% if support_email %}
-          Questions? <a href="mailto:{{ support_email }}">{{ support_email }}</a>
+          Need help? <a href="mailto:{{ support_email }}">{{ support_email }}</a>
           {% endif %}
         </p>
       </div>

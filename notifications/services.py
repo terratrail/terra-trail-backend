@@ -105,11 +105,19 @@ class NotificationService:
             f"This invitation expires in {expires_days} days.\n\n"
             f"— The TerraTrail Team"
         )
+        html = _render_email_html("invite", {
+            "invited_by_name": invited_by_name,
+            "workspace_name": workspace_name,
+            "role_label": role_label,
+            "invite_url": invite_url,
+            "expires_days": expires_days,
+        })
         return NotificationService.send_email(
             workspace=None,
             recipient=recipient,
             subject=subject,
             message=plain,
+            html_message=html,
         )
 
     @staticmethod

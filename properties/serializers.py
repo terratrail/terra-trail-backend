@@ -288,6 +288,31 @@ class PropertyDetailSerializer(serializers.ModelSerializer):
 
 
 # ---------------------------------------------------------------------------
+# Public serializer (no sensitive data — bank accounts, commissions)
+# ---------------------------------------------------------------------------
+
+
+class PublicPropertySerializer(serializers.ModelSerializer):
+    """Public-facing property serializer used by the unauthenticated estate listing."""
+
+    location = PropertyLocationSerializer(read_only=True)
+    pricing_plans = PricingPlanSerializer(many=True, read_only=True)
+    gallery_images = PropertyGallerySerializer(many=True, read_only=True)
+    amenities = PropertyAmenitySerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Property
+        fields = [
+            "id", "name", "property_type", "description",
+            "total_sqms", "available_units", "unit_measurement",
+            "status", "featured_image", "location",
+            "gallery_images", "pricing_plans", "amenities",
+            "created_at",
+        ]
+        read_only_fields = fields
+
+
+# ---------------------------------------------------------------------------
 # Create / update serializer  (all stepper fields in one request)
 # ---------------------------------------------------------------------------
 

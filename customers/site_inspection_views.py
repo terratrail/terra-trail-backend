@@ -7,7 +7,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from drf_yasg.utils import swagger_auto_schema
 
-from core.permissions import IsWorkspaceAdmin
+from core.permissions import IsWorkspaceMember
 from customers.site_inspection_models import SiteInspection
 from customers.site_inspection_serializers import (
     SiteInspectionCreateSerializer,
@@ -23,7 +23,7 @@ class SiteInspectionListCreateView(generics.ListCreateAPIView):
     POST /api/v1/customers/site-inspections/   — Create an inspection request
     """
 
-    permission_classes = [IsAuthenticated, IsWorkspaceAdmin]
+    permission_classes = [IsAuthenticated, IsWorkspaceMember]
 
     def get_serializer_class(self):
         if self.request.method == "POST":
@@ -60,7 +60,7 @@ class SiteInspectionDetailView(generics.RetrieveUpdateDestroyAPIView):
     DELETE /api/v1/customers/site-inspections/<id>/  — Delete
     """
 
-    permission_classes = [IsAuthenticated, IsWorkspaceAdmin]
+    permission_classes = [IsAuthenticated, IsWorkspaceMember]
     serializer_class = SiteInspectionSerializer
     lookup_field = "id"
     http_method_names = ["get", "patch", "delete", "head", "options"]
