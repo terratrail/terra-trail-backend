@@ -2,10 +2,12 @@
 Properties serializers.
 """
 
+from decimal import Decimal
 from django.db import transaction
 from rest_framework import serializers
 from properties.models import (
     BankAccount,
+    LandSize,
     PricingPlan,
     Property,
     PropertyAmenity,
@@ -142,6 +144,7 @@ class PropertyDocumentSerializer(serializers.ModelSerializer):
             "id",
             "document_type",
             "document_type_display",
+            "custom_document_name",
             "status",
             "document_file",
             "notes",
@@ -156,6 +159,23 @@ class PropertyGallerySerializer(serializers.ModelSerializer):
         model = PropertyGallery
         fields = ["id", "image", "caption", "order", "created_at"]
         read_only_fields = ["id", "created_at"]
+
+
+class LandSizeSerializer(serializers.ModelSerializer):
+    """Full land size representation (used in detail views)."""
+
+    class Meta:
+        model = LandSize
+        fields = [
+            "id",
+            "property",
+            "land_size",
+            "total_slots",
+            "description",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "created_at", "updated_at"]
 
 
 # ---------------------------------------------------------------------------
@@ -173,7 +193,7 @@ class _AmenityNestedSerializer(serializers.ModelSerializer):
 class _DocumentNestedSerializer(serializers.ModelSerializer):
     class Meta:
         model = PropertyDocument
-        fields = ["document_type", "status", "notes"]
+        fields = ["document_type", "custom_document_name", "status", "notes"]
 
 
 class _PricingPlanNestedSerializer(serializers.ModelSerializer):
@@ -196,6 +216,12 @@ class _BankAccountNestedSerializer(serializers.ModelSerializer):
         fields = ["bank_name", "account_name", "account_number"]
 
 
+class _LandSizeNestedSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LandSize
+        fields = ["land_size", "total_slots", "description"]
+
+
 # ---------------------------------------------------------------------------
 # List / detail serializers
 # ---------------------------------------------------------------------------
@@ -206,6 +232,7 @@ class PropertyListSerializer(serializers.ModelSerializer):
 
     location = PropertyLocationSerializer(read_only=True)
     pricing_plans_count = serializers.IntegerField(read_only=True)
+    land_sizes = LandSizeSerializer(many=True, read_only=True)
 
     class Meta:
         model = Property
@@ -220,6 +247,7 @@ class PropertyListSerializer(serializers.ModelSerializer):
             "status",
             "featured_image",
             "location",
+            "land_sizes",
             "pricing_plans_count",
             "created_at",
             "updated_at",
@@ -236,6 +264,7 @@ class PropertyDetailSerializer(serializers.ModelSerializer):
     amenities = PropertyAmenitySerializer(many=True, read_only=True)
     documents = PropertyDocumentSerializer(many=True, read_only=True)
     gallery_images = PropertyGallerySerializer(many=True, read_only=True)
+    land_sizes = LandSizeSerializer(many=True, read_only=True)
     commission_defaults = serializers.SerializerMethodField()
 
     class Meta:
@@ -252,6 +281,7 @@ class PropertyDetailSerializer(serializers.ModelSerializer):
             "featured_image",
             "location",
             "gallery_images",
+            "land_sizes",
             "pricing_plans",
             "bank_accounts",
             "amenities",
@@ -299,6 +329,7 @@ class PublicPropertySerializer(serializers.ModelSerializer):
     pricing_plans = PricingPlanSerializer(many=True, read_only=True)
     gallery_images = PropertyGallerySerializer(many=True, read_only=True)
     amenities = PropertyAmenitySerializer(many=True, read_only=True)
+    land_sizes = LandSizeSerializer(many=True, read_only=True)
 
     class Meta:
         model = Property
@@ -306,7 +337,7 @@ class PublicPropertySerializer(serializers.ModelSerializer):
             "id", "name", "property_type", "description",
             "total_sqms", "available_units", "unit_measurement",
             "status", "featured_image", "location",
-            "gallery_images", "pricing_plans", "amenities",
+            "gallery_images", "land_sizes", "pricing_plans", "amenities",
             "created_at",
         ]
         read_only_fields = fields
@@ -326,8 +357,9 @@ class PropertyCreateSerializer(serializers.ModelSerializer):
       - Step 3: Location details  (nested `location`)
       - Step 4: Amenities         (nested list `amenities`)
       - Step 5: Property documents(nested list `documents`)
-      - Step 6: Pricing plans     (nested list `pricing_plans`)
-      - Step 7: Bank accounts     (nested list `bank_accounts`)
+      - Step 6: Land inventory    (nested list `land_sizes`) — auto-computes total_sqms
+      - Step 7: Pricing plans     (nested list `pricing_plans`)
+      - Step 8: Bank accounts     (nested list `bank_accounts`)
 
     Gallery images (Step 2) are uploaded separately via
     POST /api/v1/properties/gallery/ because they are multipart uploads.
@@ -342,6 +374,7 @@ class PropertyCreateSerializer(serializers.ModelSerializer):
     bank_accounts = _BankAccountNestedSerializer(
         many=True, required=False, default=list
     )
+    land_sizes = _LandSizeNestedSerializer(many=True, required=False, default=list)
 
     class Meta:
         model = Property
@@ -356,12 +389,26 @@ class PropertyCreateSerializer(serializers.ModelSerializer):
             "status",
             "featured_image",
             "location",
+            "land_sizes",
             "amenities",
             "documents",
             "pricing_plans",
             "bank_accounts",
         ]
         read_only_fields = ["id"]
+        extra_kwargs = {
+            "total_sqms": {"required": False, "allow_null": True},
+            "available_units": {"required": False},
+        }
+
+    def _compute_from_land_sizes(self, land_sizes_data):
+        """Return (total_sqms, available_units) computed from land_sizes list."""
+        total_sqms = sum(
+            Decimal(str(ls["land_size"])) * ls["total_slots"]
+            for ls in land_sizes_data
+        )
+        available_units = sum(ls["total_slots"] for ls in land_sizes_data)
+        return total_sqms, available_units
 
     @transaction.atomic
     def create(self, validated_data):
@@ -370,16 +417,25 @@ class PropertyCreateSerializer(serializers.ModelSerializer):
         documents_data = validated_data.pop("documents", [])
         pricing_plans_data = validated_data.pop("pricing_plans", [])
         bank_accounts_data = validated_data.pop("bank_accounts", [])
+        land_sizes_data = validated_data.pop("land_sizes", [])
 
-        # Pop workspace from validated_data — it is injected there by
-        # serializer.save(workspace=...) in the view; reading it again from
-        # context would cause a duplicate keyword-argument TypeError.
+        # Auto-compute totals from land inventory
+        if land_sizes_data:
+            total_sqms, available_units = self._compute_from_land_sizes(land_sizes_data)
+            validated_data["total_sqms"] = total_sqms
+            validated_data["available_units"] = available_units
+
         workspace = validated_data.pop("workspace", None) or self.context["request"].workspace
         property_obj = Property.objects.create(workspace=workspace, **validated_data)
 
         if location_data:
             PropertyLocation.objects.create(
                 workspace=workspace, property=property_obj, **location_data
+            )
+
+        for item in land_sizes_data:
+            LandSize.objects.create(
+                workspace=workspace, property=property_obj, **item
             )
 
         for item in amenities_data:
@@ -406,11 +462,17 @@ class PropertyCreateSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         location_data = validated_data.pop("location", None)
-        # On PATCH the nested lists are replaced only when explicitly provided.
         amenities_data = validated_data.pop("amenities", None)
         documents_data = validated_data.pop("documents", None)
         pricing_plans_data = validated_data.pop("pricing_plans", None)
         bank_accounts_data = validated_data.pop("bank_accounts", None)
+        land_sizes_data = validated_data.pop("land_sizes", None)
+
+        # Auto-compute totals when land_sizes are provided
+        if land_sizes_data is not None:
+            total_sqms, available_units = self._compute_from_land_sizes(land_sizes_data)
+            validated_data["total_sqms"] = total_sqms
+            validated_data["available_units"] = available_units
 
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
@@ -424,7 +486,13 @@ class PropertyCreateSerializer(serializers.ModelSerializer):
                 defaults={**location_data, "workspace": workspace},
             )
 
-        # Replace nested collections only when the caller sends the list.
+        if land_sizes_data is not None:
+            instance.land_sizes.all().delete()
+            for item in land_sizes_data:
+                LandSize.objects.create(
+                    workspace=workspace, property=instance, **item
+                )
+
         if amenities_data is not None:
             instance.amenities.all().delete()
             for item in amenities_data:
@@ -440,7 +508,6 @@ class PropertyCreateSerializer(serializers.ModelSerializer):
                 )
 
         if pricing_plans_data is not None:
-            # Only replace non-locked plans.
             instance.pricing_plans.filter(is_locked=False).delete()
             for item in pricing_plans_data:
                 PricingPlan.objects.create(

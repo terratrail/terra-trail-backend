@@ -194,19 +194,32 @@ class WorkspaceMembersListView(generics.ListAPIView):
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()
         serializer = self.get_serializer(queryset, many=True)
-        
-        # Add managed counts to each member
+
         data = serializer.data
+        from customers.models import Customer, Subscription
+        from payments.models import Payment
+        from django.db.models import Sum, Q
+
         for item in data:
             user_id = item["user"]
-            from customers.models import Customer, Subscription
-            item["managed_customers_count"] = Customer.objects.filter(
-                workspace=request.workspace, assigned_rep_id=user_id
-            ).count()
-            item["managed_subscriptions_count"] = Subscription.objects.filter(
-                workspace=request.workspace, assigned_rep_id=user_id
-            ).count()
-            
+            ws = request.workspace
+
+            customers_qs = Customer.objects.filter(workspace=ws, assigned_rep_id=user_id)
+            subscriptions_qs = Subscription.objects.filter(workspace=ws, assigned_rep_id=user_id)
+
+            item["managed_customers_count"] = customers_qs.count()
+            item["managed_subscriptions_count"] = subscriptions_qs.count()
+            item["active_subscriptions_count"] = subscriptions_qs.filter(status="ACTIVE").count()
+            item["properties_count"] = (
+                subscriptions_qs.values("property_id").distinct().count()
+            )
+            revenue = Payment.objects.filter(
+                workspace=ws,
+                subscription__assigned_rep_id=user_id,
+                status="APPROVED",
+            ).aggregate(total=Sum("amount"))["total"] or 0
+            item["total_revenue_managed"] = float(revenue)
+
         return Response(data)
 
 

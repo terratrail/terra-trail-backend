@@ -38,7 +38,8 @@ class Property(WorkspaceScopedModel):
     description = models.TextField(blank=True, default="")
     total_sqms = models.DecimalField(
         max_digits=12, decimal_places=2,
-        validators=[MinValueValidator(Decimal("0.01"))],
+        null=True, blank=True,
+        help_text="Auto-computed from land inventory (land_size × total_slots for each LandSize).",
     )
     unit_measurement = models.CharField(max_length=20, default="sqm")
     status = models.CharField(
@@ -304,6 +305,10 @@ class PropertyDocument(WorkspaceScopedModel):
         choices=Status.choices,
         default=Status.NOT_STARTED,
     )
+    custom_document_name = models.CharField(
+        max_length=255, blank=True, default="",
+        help_text="Custom name when document_type is OTHER.",
+    )
     document_file = models.FileField(
         upload_to="properties/documents/",
         blank=True,
@@ -351,3 +356,43 @@ class PropertyGallery(WorkspaceScopedModel):
 
     def __str__(self):
         return f"Gallery image for {self.property.name} (order {self.order})"
+
+
+class LandSize(WorkspaceScopedModel):
+    """
+    A distinct land size (slot category) within a property.
+
+    Each land size has a fixed number of slots — the total number of customers
+    who can purchase a plot of that size. Multiple pricing plans can reference
+    the same land size. Total SQMs for the property is auto-computed as
+    Σ(land_size × total_slots) across all LandSize records.
+    """
+
+    property = models.ForeignKey(
+        Property,
+        on_delete=models.CASCADE,
+        related_name="land_sizes",
+    )
+    land_size = models.DecimalField(
+        max_digits=12, decimal_places=2,
+        validators=[MinValueValidator(Decimal("0.01"))],
+        help_text="Plot size in SQM (e.g. 300, 500, 600)",
+    )
+    total_slots = models.PositiveIntegerField(
+        default=1,
+        help_text="Total number of plots of this size available",
+    )
+    description = models.CharField(
+        max_length=255, blank=True, default="",
+        help_text="Optional label e.g. 'Half Plot'",
+    )
+
+    class Meta:
+        unique_together = ["property", "land_size"]
+        ordering = ["land_size"]
+        indexes = [
+            models.Index(fields=["workspace", "property"]),
+        ]
+
+    def __str__(self):
+        return f"{self.land_size} SQM × {self.total_slots} slots ({self.property.name})"

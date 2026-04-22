@@ -16,7 +16,7 @@ class UserSerializer(serializers.ModelSerializer):
         fields = [
             "id", "email", "phone", "first_name", "last_name",
             "full_name", "default_role", "is_active",
-            "title", "gender", "date_of_birth", "occupation",
+            "title", "gender", "birth_month", "birth_day", "occupation",
             "marital_status", "address", "country", "state",
             "nationality", "date_joined",
         ]
@@ -33,7 +33,8 @@ class RegisterSerializer(serializers.Serializer):
     phone = serializers.CharField(max_length=20, required=False, default="")
     title = serializers.CharField(max_length=10, required=False, default="")
     gender = serializers.CharField(max_length=10, required=False, default="")
-    date_of_birth = serializers.DateField(required=False, allow_null=True)
+    birth_month = serializers.IntegerField(required=False, allow_null=True, min_value=1, max_value=12)
+    birth_day = serializers.IntegerField(required=False, allow_null=True, min_value=1, max_value=31)
     occupation = serializers.CharField(max_length=255, required=False, default="")
     marital_status = serializers.CharField(max_length=20, required=False, default="")
     address = serializers.CharField(required=False, default="")
@@ -79,12 +80,13 @@ class WorkspaceMembershipSerializer(serializers.ModelSerializer):
 
     user_email = serializers.CharField(source="user.email", read_only=True)
     user_name = serializers.CharField(source="user.full_name", read_only=True)
+    user_phone = serializers.CharField(source="user.phone", read_only=True)
     workspace_name = serializers.CharField(source="workspace.name", read_only=True)
 
     class Meta:
         model = WorkspaceMembership
         fields = [
-            "id", "user", "user_email", "user_name",
+            "id", "user", "user_email", "user_name", "user_phone",
             "workspace", "workspace_name", "role", "is_active",
             "created_at",
         ]

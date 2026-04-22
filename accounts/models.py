@@ -8,6 +8,7 @@ per-workspace roles.
 
 import uuid
 from django.contrib.auth.models import AbstractUser, BaseUserManager
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 from django.utils import timezone
 
@@ -79,7 +80,16 @@ class User(AbstractUser):
     gender = models.CharField(
         max_length=10, choices=Gender.choices, blank=True, default=""
     )
-    date_of_birth = models.DateField(null=True, blank=True)
+    birth_month = models.PositiveSmallIntegerField(
+        null=True, blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(12)],
+        help_text="Birthday month (1–12)",
+    )
+    birth_day = models.PositiveSmallIntegerField(
+        null=True, blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(31)],
+        help_text="Birthday day (1–31)",
+    )
     occupation = models.CharField(max_length=255, blank=True, default="")
     marital_status = models.CharField(
         max_length=20, choices=MaritalStatus.choices, blank=True, default=""
