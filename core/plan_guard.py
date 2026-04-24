@@ -27,6 +27,9 @@ class PlanLimitExceeded(Exception):
 
 class PlanGuard:
 
+    # Roles that are unlimited on every plan — never count against the cap
+    _UNLIMITED_ROLES = {"SALES_REP", "CUSTOMER"}
+
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
@@ -131,13 +134,20 @@ class PlanGuard:
             )
 
     @staticmethod
-    def check_team_member_limit(workspace):
+    def check_team_member_limit(workspace, role=None):
+        # SALES_REP and CUSTOMER roles are unlimited on all plans
+        if role and role.upper() in PlanGuard._UNLIMITED_ROLES:
+            return
+
         limit = PlanGuard._limit(workspace, "team_members")
         if limit is None:
             return
         from accounts.models import WorkspaceMembership
+        # Exclude the workspace owner and unlimited roles — they don't consume slots
         count = WorkspaceMembership.objects.filter(
-            workspace=workspace, is_active=True
+            workspace=workspace, is_active=True,
+        ).exclude(role=WorkspaceMembership.Role.OWNER).exclude(
+            role__in=PlanGuard._UNLIMITED_ROLES,
         ).count()
         if count >= limit:
             noun = "team member" if limit == 1 else "team members"
@@ -194,7 +204,9 @@ class PlanGuard:
                 },
                 "team_members": {
                     "used": WorkspaceMembership.objects.filter(
-                        workspace=workspace, is_active=True
+                        workspace=workspace, is_active=True,
+                    ).exclude(role=WorkspaceMembership.Role.OWNER).exclude(
+                        role__in=PlanGuard._UNLIMITED_ROLES,
                     ).count(),
                     "limit": ws_limits["team_members"],
                 },

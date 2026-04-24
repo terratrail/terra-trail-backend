@@ -324,7 +324,7 @@ class WorkspaceService:
         if not already_member:
             from core.plan_guard import PlanGuard, PlanLimitExceeded
 
-            PlanGuard.check_team_member_limit(workspace)
+            PlanGuard.check_team_member_limit(workspace, role=role)
 
         membership, created = WorkspaceMembership.objects.get_or_create(
             user=user,

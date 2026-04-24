@@ -215,7 +215,7 @@ class WorkspaceMembersListView(generics.ListAPIView):
             )
             revenue = Payment.objects.filter(
                 workspace=ws,
-                subscription__assigned_rep_id=user_id,
+                installment__subscription__assigned_rep_id=user_id,
                 status="APPROVED",
             ).aggregate(total=Sum("amount"))["total"] or 0
             item["total_revenue_managed"] = float(revenue)
@@ -239,6 +239,16 @@ class InviteMemberView(generics.CreateAPIView):
         from datetime import timedelta
         from django.utils import timezone
         from django.conf import settings as django_settings
+        from rest_framework.exceptions import PermissionDenied
+
+        # Check the plan limit before issuing the invite so the error surfaces
+        # to the admin/owner who is sending it, not to the invited user later.
+        invited_role = serializer.validated_data.get("role", "ADMIN")
+        try:
+            from core.plan_guard import PlanGuard, PlanLimitExceeded
+            PlanGuard.check_team_member_limit(self.request.workspace, role=invited_role)
+        except PlanLimitExceeded as e:
+            raise PermissionDenied(str(e))
 
         token = str(uuid.uuid4())
         expiry = timezone.now() + timedelta(days=7)
