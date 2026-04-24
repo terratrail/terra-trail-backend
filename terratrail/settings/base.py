@@ -315,6 +315,12 @@ SMS_PROVIDER = config("SMS_PROVIDER", default="console")
 SMS_API_KEY = config("SMS_API_KEY", default="")
 SMS_SENDER_ID = config("SMS_SENDER_ID", default="TerraTrail")
 
+# ---------------------------------------------------------------------------
+# Paystack
+# ---------------------------------------------------------------------------
+PAYSTACK_SECRET_KEY = config("PAYSTACK_SECRET_KEY", default="")
+PAYSTACK_PUBLIC_KEY = config("PAYSTACK_PUBLIC_KEY", default="")
+
 
 # ---------------------------------------------------------------------------
 # Default primary key field type

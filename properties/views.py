@@ -457,3 +457,141 @@ class PublicPropertyDetailView(APIView):
             return Response({"detail": "Property not found."}, status=status.HTTP_404_NOT_FOUND)
 
         return Response(PublicPropertySerializer(prop, context={"request": request}).data)
+
+
+# ---------------------------------------------------------------------------
+# Inspection Config endpoints
+# ---------------------------------------------------------------------------
+
+class InspectionConfigView(APIView):
+    """
+    GET  /api/v1/properties/<id>/inspection-config/  — Get config (or 404)
+    POST /api/v1/properties/<id>/inspection-config/  — Create or update config
+    """
+    permission_classes = [IsAuthenticated, IsWorkspaceAdmin]
+
+    def _get_property(self, request, id):
+        from django.shortcuts import get_object_or_404
+        return get_object_or_404(Property, id=id, workspace=request.workspace)
+
+    def get(self, request, id):
+        from properties.models import InspectionConfig
+        from properties.serializers import InspectionConfigSerializer
+        prop = self._get_property(request, id)
+        try:
+            config = prop.inspection_config
+        except InspectionConfig.DoesNotExist:
+            return Response({}, status=status.HTTP_200_OK)
+        return Response(InspectionConfigSerializer(config, context={"request": request}).data)
+
+    def post(self, request, id):
+        from properties.models import InspectionConfig
+        from properties.serializers import InspectionConfigSerializer
+        prop = self._get_property(request, id)
+        try:
+            config = prop.inspection_config
+            serializer = InspectionConfigSerializer(config, data=request.data, partial=True, context={"request": request})
+        except InspectionConfig.DoesNotExist:
+            data = {**request.data, "property": str(prop.id)}
+            serializer = InspectionConfigSerializer(data=data, context={"request": request})
+        if serializer.is_valid():
+            serializer.save(workspace=request.workspace, property=prop)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class PublicInspectionConfigView(APIView):
+    """
+    GET /api/v1/public/<workspace_slug>/properties/<id>/inspection-config/
+    Public — no auth required.
+    """
+    permission_classes = []
+
+    def get(self, request, workspace_slug, id):
+        from core.models import Workspace
+        from properties.models import InspectionConfig
+        from properties.serializers import InspectionConfigSerializer
+        try:
+            workspace = Workspace.objects.get(slug=workspace_slug, is_active=True)
+        except Workspace.DoesNotExist:
+            return Response({"detail": "Workspace not found."}, status=status.HTTP_404_NOT_FOUND)
+        try:
+            prop = Property.objects.get(id=id, workspace=workspace, status="PUBLISHED")
+        except Property.DoesNotExist:
+            return Response({"detail": "Property not found."}, status=status.HTTP_404_NOT_FOUND)
+        try:
+            config = prop.inspection_config
+            return Response(InspectionConfigSerializer(config, context={"request": request}).data)
+        except InspectionConfig.DoesNotExist:
+            return Response({}, status=status.HTTP_200_OK)
+
+
+# ---------------------------------------------------------------------------
+# Property Appreciation endpoints
+# ---------------------------------------------------------------------------
+
+class PropertyAppreciationListCreateView(APIView):
+    """
+    GET  /api/v1/properties/<id>/appreciations/  — List appreciation records
+    POST /api/v1/properties/<id>/appreciations/  — Add an appreciation record
+    """
+    permission_classes = [IsAuthenticated, IsWorkspaceAdminOrReadOnly]
+
+    def _get_property(self, request, id):
+        from django.shortcuts import get_object_or_404
+        return get_object_or_404(Property, id=id, workspace=request.workspace)
+
+    def get(self, request, id):
+        from properties.models import PropertyAppreciation
+        from properties.serializers import PropertyAppreciationSerializer
+        prop = self._get_property(request, id)
+        qs = PropertyAppreciation.objects.filter(workspace=request.workspace, property=prop)
+        return Response(PropertyAppreciationSerializer(qs, many=True, context={"request": request}).data)
+
+    def post(self, request, id):
+        from properties.models import PropertyAppreciation
+        from properties.serializers import PropertyAppreciationSerializer
+        prop = self._get_property(request, id)
+        data = {**request.data, "property": str(prop.id)}
+        serializer = PropertyAppreciationSerializer(data=data, context={"request": request})
+        if serializer.is_valid():
+            serializer.save(workspace=request.workspace, property=prop)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class PropertyAppreciationDetailView(APIView):
+    """DELETE /api/v1/properties/<id>/appreciations/<appr_id>/"""
+    permission_classes = [IsAuthenticated, IsWorkspaceAdmin]
+
+    def delete(self, request, id, appr_id):
+        from properties.models import PropertyAppreciation
+        try:
+            obj = PropertyAppreciation.objects.get(id=appr_id, workspace=request.workspace, property_id=id)
+            obj.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except PropertyAppreciation.DoesNotExist:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+
+
+class PublicPropertyAppreciationView(APIView):
+    """
+    GET /api/v1/public/<workspace_slug>/properties/<id>/appreciations/
+    Public — no auth required.
+    """
+    permission_classes = []
+
+    def get(self, request, workspace_slug, id):
+        from core.models import Workspace
+        from properties.models import PropertyAppreciation
+        from properties.serializers import PropertyAppreciationSerializer
+        try:
+            workspace = Workspace.objects.get(slug=workspace_slug, is_active=True)
+        except Workspace.DoesNotExist:
+            return Response({"detail": "Workspace not found."}, status=status.HTTP_404_NOT_FOUND)
+        try:
+            Property.objects.get(id=id, workspace=workspace, status="PUBLISHED")
+        except Property.DoesNotExist:
+            return Response({"detail": "Property not found."}, status=status.HTTP_404_NOT_FOUND)
+        qs = PropertyAppreciation.objects.filter(workspace=workspace, property_id=id)
+        return Response(PropertyAppreciationSerializer(qs, many=True, context={"request": request}).data)

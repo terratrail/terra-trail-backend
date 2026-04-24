@@ -7,10 +7,12 @@ from django.db import transaction
 from rest_framework import serializers
 from properties.models import (
     BankAccount,
+    InspectionConfig,
     LandSize,
     PricingPlan,
     Property,
     PropertyAmenity,
+    PropertyAppreciation,
     PropertyDocument,
     PropertyGallery,
     PropertyLocation,
@@ -522,3 +524,32 @@ class PropertyCreateSerializer(serializers.ModelSerializer):
                 )
 
         return instance
+
+
+# ---------------------------------------------------------------------------
+# InspectionConfig serializer
+# ---------------------------------------------------------------------------
+
+class InspectionConfigSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = InspectionConfig
+        fields = [
+            "id", "property", "meeting_point", "virtual_link",
+            "available_days", "time_from", "time_to", "max_persons", "notes",
+            "created_at", "updated_at",
+        ]
+        read_only_fields = ["id", "created_at", "updated_at"]
+
+
+# ---------------------------------------------------------------------------
+# PropertyAppreciation serializer
+# ---------------------------------------------------------------------------
+
+class PropertyAppreciationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PropertyAppreciation
+        fields = [
+            "id", "property", "effective_date", "old_price", "new_price",
+            "percentage_change", "notes", "created_at",
+        ]
+        read_only_fields = ["id", "percentage_change", "created_at"]

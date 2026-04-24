@@ -3,304 +3,881 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ workspace.name }} | TerraTrail</title>
-    
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <!-- Bootstrap 5 -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Font Awesome -->
+    <title>{% if workspace %}{{ workspace.name }}{% else %}TerraTrail{% endif %} | Real Estate Management</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
     <style>
         :root {
-            --primary-gradient: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
-            --glass-bg: rgba(255, 255, 255, 0.1);
-            --glass-border: rgba(255, 255, 255, 0.2);
-            --dark-bg: #0f172a;
+            --bg: #070c17;
+            --bg-2: #0d1526;
+            --card: rgba(255,255,255,0.04);
+            --card-hover: rgba(255,255,255,0.07);
+            --em: #10b981;
+            --sky: #0ea5e9;
+            --gold: #f59e0b;
+            --violet: #8b5cf6;
+            --rose: #f43f5e;
+            --cyan: #06b6d4;
+            --grad: linear-gradient(135deg,#10b981,#0ea5e9);
+            --grad-gold: linear-gradient(135deg,#f59e0b,#ef4444);
+            --grad-violet: linear-gradient(135deg,#8b5cf6,#ec4899);
+            --t1: #f8fafc;
+            --t2: #94a3b8;
+            --t3: #64748b;
+            --border: rgba(255,255,255,0.08);
+            --border-em: rgba(16,185,129,0.3);
+            --shadow: 0 4px 24px rgba(0,0,0,0.4);
+            --glow: 0 0 40px rgba(16,185,129,0.12);
+            --r1: 8px; --r2: 14px; --r3: 20px; --r4: 28px;
+            --nav-h: 68px;
+            --ease: all 0.28s cubic-bezier(0.4,0,0.2,1);
+        }
+        *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+        html{scroll-behavior:smooth;}
+        body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--t1);overflow-x:hidden;line-height:1.6;}
+        img{max-width:100%;height:auto;display:block;}
+        a{text-decoration:none;color:inherit;}
+        .container{width:100%;max-width:1240px;margin:0 auto;padding:0 24px;}
+
+        /* ── ORBS ── */
+        .orbs{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none;}
+        .orb{position:absolute;border-radius:50%;filter:blur(90px);opacity:.1;}
+        .orb-1{width:560px;height:560px;background:var(--em);top:-160px;right:-80px;}
+        .orb-2{width:480px;height:480px;background:var(--sky);bottom:5%;left:-120px;}
+        .orb-3{width:380px;height:380px;background:var(--violet);top:45%;left:48%;transform:translate(-50%,-50%);}
+
+        /* ── NAVBAR ── */
+        .nav{position:sticky;top:0;z-index:900;height:var(--nav-h);background:rgba(7,12,23,.82);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid var(--border);transition:var(--ease);}
+        .nav.scrolled{background:rgba(7,12,23,.97);}
+        .nav__inner{height:100%;display:flex;align-items:center;justify-content:space-between;gap:16px;}
+        .nav__brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:1.15rem;flex-shrink:0;}
+        .nav__logo{width:34px;height:34px;border-radius:var(--r1);object-fit:cover;}
+        .nav__logo-box{width:34px;height:34px;border-radius:var(--r1);background:var(--grad);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.95rem;flex-shrink:0;}
+        .nav__links{display:flex;align-items:center;gap:4px;list-style:none;}
+        .nav__links a{color:var(--t2);font-weight:500;font-size:.9rem;padding:7px 14px;border-radius:var(--r1);transition:var(--ease);}
+        .nav__links a:hover{color:var(--t1);background:var(--card);}
+        .nav__ctas{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+        .nav__burger{display:none;flex-direction:column;justify-content:center;gap:5px;width:38px;height:38px;padding:7px;background:var(--card);border:1px solid var(--border);border-radius:var(--r1);cursor:pointer;transition:var(--ease);}
+        .nav__burger span{display:block;width:100%;height:2px;background:var(--t1);border-radius:2px;transition:var(--ease);}
+        .nav__burger.open span:nth-child(1){transform:translateY(7px) rotate(45deg);}
+        .nav__burger.open span:nth-child(2){opacity:0;transform:scaleX(0);}
+        .nav__burger.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg);}
+        .nav__mobile{display:none;position:absolute;top:var(--nav-h);left:0;right:0;background:rgba(7,12,23,.98);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:20px 24px;animation:slideDown .25s ease;}
+        .nav__mobile.open{display:block;}
+        .nav__mobile nav{display:flex;flex-direction:column;gap:4px;margin-bottom:16px;}
+        .nav__mobile nav a{display:flex;align-items:center;gap:12px;color:var(--t2);font-weight:500;padding:11px 14px;border-radius:var(--r1);transition:var(--ease);}
+        .nav__mobile nav a:hover,.nav__mobile nav a:focus{color:var(--t1);background:var(--card-hover);}
+        .nav__mobile nav a i{width:18px;text-align:center;font-size:.85rem;}
+        .nav__mobile-actions{display:flex;flex-direction:column;gap:10px;}
+
+        /* ── BUTTONS ── */
+        .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-family:'Outfit',sans-serif;font-weight:600;font-size:.9rem;border:none;cursor:pointer;transition:var(--ease);white-space:nowrap;border-radius:var(--r1);}
+        .btn-primary{background:var(--grad);color:#fff;padding:12px 22px;}
+        .btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(16,185,129,.38);color:#fff;}
+        .btn-ghost{background:transparent;color:var(--t2);padding:12px 22px;border:1px solid var(--border);}
+        .btn-ghost:hover{color:var(--t1);background:var(--card);border-color:var(--border-em);}
+        .btn-gold{background:var(--grad-gold);color:#fff;padding:12px 22px;}
+        .btn-gold:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(245,158,11,.35);color:#fff;}
+        .btn-lg{padding:15px 30px;font-size:1rem;border-radius:var(--r2);}
+        .btn-sm{padding:8px 16px;font-size:.82rem;}
+        .btn-full{width:100%;justify-content:center;}
+
+        /* ── HERO ── */
+        .hero{padding:clamp(72px,10vw,130px) 0 clamp(56px,7vw,90px);}
+        .hero__grid{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center;}
+        .hero__badge{display:inline-flex;align-items:center;gap:8px;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.28);color:#34d399;padding:5px 14px 5px 8px;border-radius:50px;font-size:.8rem;font-weight:600;margin-bottom:24px;}
+        .hero__badge-dot{width:7px;height:7px;border-radius:50%;background:var(--em);animation:pulse 2s infinite;}
+        .hero__h1{font-size:clamp(2.2rem,4.8vw,3.8rem);font-weight:800;line-height:1.1;letter-spacing:-.025em;margin-bottom:20px;}
+        .grad-text{background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+        .hero__sub{font-size:clamp(.95rem,1.6vw,1.1rem);color:var(--t2);max-width:500px;line-height:1.72;margin-bottom:36px;}
+        .hero__btns{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:40px;}
+        .hero__proof{display:flex;align-items:center;gap:14px;}
+        .hero__avs{display:flex;}
+        .hero__av{width:34px;height:34px;border-radius:50%;border:2px solid var(--bg);display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:700;margin-left:-9px;flex-shrink:0;}
+        .hero__av:first-child{margin-left:0;}
+        .hero__proof-txt{font-size:.82rem;color:var(--t2);}
+        .hero__proof-txt strong{color:var(--t1);}
+
+        /* Dashboard mockup */
+        .mockup{background:var(--bg-2);border:1px solid var(--border);border-radius:var(--r4);padding:18px;box-shadow:var(--shadow),var(--glow);position:relative;overflow:hidden;}
+        .mockup::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(16,185,129,.04) 0%,transparent 60%);pointer-events:none;}
+        .mockup-bar{display:flex;align-items:center;gap:6px;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--border);}
+        .mdot{width:9px;height:9px;border-radius:50%;}
+        .mdot:nth-child(1){background:#ef4444;}
+        .mdot:nth-child(2){background:#f59e0b;}
+        .mdot:nth-child(3){background:#10b981;}
+        .mtitle{font-size:.72rem;color:var(--t3);margin-left:6px;}
+        .m-stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
+        .m-stat{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:13px;}
+        .m-stat-lbl{font-size:.65rem;color:var(--t3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;}
+        .m-stat-val{font-size:1.3rem;font-weight:800;}
+        .c-green{color:#34d399;} .c-blue{color:#38bdf8;} .c-gold{color:#fbbf24;} .c-violet{color:#a78bfa;}
+        .m-chart{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:13px;margin-bottom:10px;}
+        .m-chart-lbl{font-size:.68rem;color:var(--t3);margin-bottom:10px;}
+        .m-bars{display:flex;align-items:flex-end;gap:5px;height:52px;}
+        .m-bar{flex:1;border-radius:3px 3px 0 0;background:var(--grad);opacity:.65;transition:var(--ease);}
+        .m-bar:hover{opacity:1;}
+        .m-list{display:flex;flex-direction:column;gap:7px;}
+        .m-row{display:flex;align-items:center;gap:9px;padding:9px;background:var(--card);border-radius:var(--r1);}
+        .m-icon{width:26px;height:26px;border-radius:var(--r1);background:rgba(16,185,129,.12);display:flex;align-items:center;justify-content:center;font-size:.65rem;color:#34d399;flex-shrink:0;}
+        .m-name{font-size:.72rem;font-weight:600;}
+        .m-sub{font-size:.62rem;color:var(--t3);}
+        .m-badge{font-size:.6rem;padding:2px 7px;border-radius:50px;font-weight:700;}
+        .b-green{background:rgba(16,185,129,.14);color:#34d399;}
+        .b-amber{background:rgba(245,158,11,.14);color:#fbbf24;}
+
+        /* Float cards */
+        .float-wrap{position:relative;}
+        .fcard{position:absolute;background:rgba(13,21,38,.92);border:1px solid var(--border);border-radius:var(--r2);padding:12px 16px;display:flex;align-items:center;gap:10px;backdrop-filter:blur(12px);z-index:2;}
+        .fcard-1{bottom:-16px;left:-24px;animation:floatY 3s ease-in-out infinite;}
+        .fcard-2{top:-16px;right:-16px;animation:floatY 3s ease-in-out infinite 1.5s;}
+        .ficon{width:32px;height:32px;border-radius:var(--r1);display:flex;align-items:center;justify-content:center;font-size:.8rem;flex-shrink:0;}
+        .ficon-g{background:rgba(16,185,129,.14);color:#34d399;}
+        .ficon-a{background:rgba(245,158,11,.14);color:#fbbf24;}
+        .fcard strong{display:block;font-size:.8rem;font-weight:700;}
+        .fcard span{font-size:.7rem;color:var(--t3);}
+
+        /* ── STATS BAR ── */
+        .stats{padding:28px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);background:rgba(13,21,38,.45);}
+        .stats__grid{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;text-align:center;}
+        .s-num{font-size:clamp(1.65rem,2.8vw,2.3rem);font-weight:800;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1.1;}
+        .s-lbl{font-size:.8rem;color:var(--t3);margin-top:3px;}
+
+        /* ── SECTION BASE ── */
+        .sec{padding:clamp(72px,9vw,110px) 0;}
+        .sec-alt{background:var(--bg-2);}
+        .s-head{text-align:center;margin-bottom:clamp(44px,5.5vw,64px);}
+        .s-tag{display:inline-flex;align-items:center;gap:6px;background:rgba(16,185,129,.07);border:1px solid rgba(16,185,129,.2);color:#34d399;padding:4px 13px;border-radius:50px;font-size:.75rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:14px;}
+        .s-title{font-size:clamp(1.7rem,3.2vw,2.6rem);font-weight:800;letter-spacing:-.022em;line-height:1.15;margin-bottom:13px;}
+        .s-desc{font-size:clamp(.9rem,1.4vw,1.05rem);color:var(--t2);max-width:580px;margin:0 auto;line-height:1.72;}
+
+        /* ── FEATURES ── */
+        .feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;}
+        .feat-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r3);padding:28px;transition:var(--ease);position:relative;overflow:hidden;}
+        .feat-card::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--grad);opacity:0;transition:var(--ease);}
+        .feat-card:hover{background:var(--card-hover);border-color:var(--border-em);transform:translateY(-4px);box-shadow:var(--shadow),var(--glow);}
+        .feat-card:hover::after{opacity:1;}
+        .feat-icon{width:48px;height:48px;border-radius:var(--r2);display:flex;align-items:center;justify-content:center;font-size:1.2rem;margin-bottom:18px;}
+        .fi-em{background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.2);color:#34d399;}
+        .fi-sky{background:rgba(14,165,233,.1);border:1px solid rgba(14,165,233,.2);color:#38bdf8;}
+        .fi-gold{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.2);color:#fbbf24;}
+        .fi-vio{background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.2);color:#a78bfa;}
+        .fi-rose{background:rgba(244,63,94,.1);border:1px solid rgba(244,63,94,.2);color:#fb7185;}
+        .fi-cyan{background:rgba(6,182,212,.1);border:1px solid rgba(6,182,212,.2);color:#22d3ee;}
+        .feat-card h3{font-size:1rem;font-weight:700;margin-bottom:8px;}
+        .feat-card p{font-size:.875rem;color:var(--t2);line-height:1.64;}
+
+        /* ── HOW IT WORKS ── */
+        .hiw-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:36px;position:relative;}
+        .hiw-grid::before{content:'';position:absolute;top:27px;left:calc(16.66% + 16px);right:calc(16.66% + 16px);height:1px;background:linear-gradient(90deg,var(--em),var(--sky));opacity:.25;}
+        .hiw-step{text-align:center;padding:0 12px;}
+        .hiw-num{width:54px;height:54px;border-radius:50%;background:var(--grad);display:flex;align-items:center;justify-content:center;font-size:1.15rem;font-weight:800;margin:0 auto 20px;box-shadow:0 0 0 8px rgba(16,185,129,.09);}
+        .hiw-step h3{font-size:1rem;font-weight:700;margin-bottom:8px;}
+        .hiw-step p{font-size:.875rem;color:var(--t2);line-height:1.64;}
+
+        /* ── PROPERTIES ── */
+        .prop-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;}
+        .prop-card{background:var(--bg-2);border:1px solid var(--border);border-radius:var(--r3);overflow:hidden;transition:var(--ease);}
+        .prop-card:hover{transform:translateY(-5px);box-shadow:var(--shadow);border-color:var(--border-em);}
+        .prop-img{width:100%;aspect-ratio:16/9;background:linear-gradient(135deg,#1a2e22 0%,#0e1f30 100%);display:flex;align-items:center;justify-content:center;position:relative;}
+        .prop-img-ph{display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--t3);}
+        .prop-img-ph i{font-size:1.8rem;}
+        .prop-img-ph span{font-size:.72rem;}
+        .prop-tag{position:absolute;top:10px;left:10px;font-size:.65rem;font-weight:700;padding:3px 9px;border-radius:50px;text-transform:uppercase;letter-spacing:.04em;}
+        .pt-avail{background:rgba(16,185,129,.88);color:#fff;}
+        .pt-sold{background:rgba(239,68,68,.88);color:#fff;}
+        .pt-res{background:rgba(245,158,11,.88);color:#fff;}
+        .prop-body{padding:18px;}
+        .prop-type{font-size:.7rem;color:var(--t3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;}
+        .prop-name{font-size:.95rem;font-weight:700;margin-bottom:7px;}
+        .prop-loc{display:flex;align-items:center;gap:5px;font-size:.76rem;color:var(--t2);margin-bottom:13px;}
+        .prop-loc i{color:#34d399;font-size:.7rem;}
+        .prop-meta{display:flex;gap:13px;padding-top:13px;border-top:1px solid var(--border);}
+        .prop-mi{display:flex;align-items:center;gap:5px;font-size:.76rem;color:var(--t2);}
+        .prop-mi i{color:#34d399;font-size:.68rem;}
+        .prop-foot{display:flex;align-items:center;justify-content:space-between;padding:13px 18px;border-top:1px solid var(--border);}
+        .prop-price{font-weight:800;font-size:1rem;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+        .prop-arrow{width:30px;height:30px;border-radius:50%;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.28);display:flex;align-items:center;justify-content:center;color:#34d399;font-size:.7rem;transition:var(--ease);cursor:pointer;}
+        .prop-arrow:hover{background:var(--em);color:#fff;}
+
+        /* ── TESTIMONIALS ── */
+        .testi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;}
+        .testi-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r3);padding:26px;transition:var(--ease);}
+        .testi-card:hover{border-color:var(--border-em);transform:translateY(-2px);}
+        .stars{display:flex;gap:3px;color:#fbbf24;font-size:.8rem;margin-bottom:14px;}
+        .testi-txt{font-size:.875rem;color:var(--t2);line-height:1.7;margin-bottom:18px;font-style:italic;}
+        .testi-auth{display:flex;align-items:center;gap:11px;}
+        .testi-av{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem;flex-shrink:0;}
+        .testi-name{font-weight:700;font-size:.875rem;}
+        .testi-role{font-size:.76rem;color:var(--t3);}
+
+        /* ── CTA ── */
+        .cta-card{background:linear-gradient(135deg,rgba(16,185,129,.1) 0%,rgba(14,165,233,.07) 100%);border:1px solid rgba(16,185,129,.18);border-radius:var(--r4);padding:clamp(44px,5.5vw,68px) clamp(28px,4.5vw,60px);text-align:center;position:relative;overflow:hidden;}
+        .cta-card::before{content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:radial-gradient(ellipse at center,rgba(16,185,129,.04) 0%,transparent 68%);pointer-events:none;}
+        .cta-card h2{font-size:clamp(1.7rem,3.2vw,2.8rem);font-weight:800;letter-spacing:-.022em;margin-bottom:13px;}
+        .cta-card p{font-size:clamp(.9rem,1.4vw,1.05rem);color:var(--t2);max-width:520px;margin:0 auto 30px;line-height:1.7;}
+        .cta-btns{display:flex;justify-content:center;flex-wrap:wrap;gap:14px;}
+
+        /* ── WORKSPACE INFO CARD ── */
+        .ws-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r3);padding:28px;display:grid;grid-template-columns:repeat(3,1fr);gap:20px;text-align:center;margin-bottom:36px;}
+        .ws-card-item h3{font-size:1.15rem;font-weight:800;}
+        .ws-card-item p{font-size:.78rem;color:var(--t3);text-transform:uppercase;letter-spacing:.05em;margin-top:4px;}
+
+        /* ── FOOTER ── */
+        .footer{background:var(--bg-2);border-top:1px solid var(--border);padding:clamp(44px,5.5vw,64px) 0 28px;}
+        .footer__grid{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:44px;margin-bottom:44px;}
+        .f-brand{display:flex;align-items:center;gap:9px;font-weight:700;font-size:1.1rem;margin-bottom:13px;}
+        .f-logo{width:30px;height:30px;border-radius:var(--r1);background:var(--grad);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.85rem;}
+        .f-desc{font-size:.845rem;color:var(--t2);line-height:1.66;margin-bottom:20px;}
+        .f-socials{display:flex;gap:10px;}
+        .f-soc{width:34px;height:34px;border-radius:var(--r1);background:var(--card);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--t2);font-size:.85rem;transition:var(--ease);}
+        .f-soc:hover{background:rgba(16,185,129,.1);border-color:var(--border-em);color:#34d399;}
+        .f-col h4{font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px;}
+        .f-links{list-style:none;display:flex;flex-direction:column;gap:9px;}
+        .f-links a{font-size:.845rem;color:var(--t2);transition:var(--ease);}
+        .f-links a:hover{color:var(--t1);}
+        .f-bottom{padding-top:22px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;}
+        .f-copy{font-size:.76rem;color:var(--t3);}
+        .f-copy strong{color:var(--t2);}
+        .f-blnks{display:flex;gap:20px;}
+        .f-blnks a{font-size:.76rem;color:var(--t3);transition:var(--ease);}
+        .f-blnks a:hover{color:var(--t1);}
+
+        /* ── ANIMATIONS ── */
+        @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(16,185,129,.4);}50%{box-shadow:0 0 0 6px rgba(16,185,129,0);}}
+        @keyframes floatY{0%,100%{transform:translateY(0);}50%{transform:translateY(-9px);}}
+        @keyframes slideDown{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);}}
+
+        /* ── SCROLL REVEAL ── */
+        .rv{opacity:0;transform:translateY(26px);transition:opacity .65s ease,transform .65s ease;}
+        .rv.in{opacity:1;transform:none;}
+
+        /* ══════════════════════════════
+           RESPONSIVE
+        ══════════════════════════════ */
+
+        /* Tablet landscape: 1024px */
+        @media(max-width:1023px){
+            .feat-grid{grid-template-columns:repeat(2,1fr);}
+            .footer__grid{grid-template-columns:1fr 1fr;gap:28px;}
+            .fcard-1,.fcard-2{display:none;}
         }
 
-        body {
-            font-family: 'Outfit', sans-serif;
-            background-color: var(--dark-bg);
-            color: #ffffff;
-            overflow-x: hidden;
-            min-height: 100vh;
+        /* Tablet portrait: 900px */
+        @media(max-width:900px){
+            .hero__grid{grid-template-columns:1fr;gap:44px;text-align:center;}
+            .hero__sub{margin-left:auto;margin-right:auto;}
+            .hero__btns{justify-content:center;}
+            .hero__proof{justify-content:center;}
+            .stats__grid{grid-template-columns:repeat(2,1fr);gap:28px;}
+            .hiw-grid{grid-template-columns:1fr;gap:28px;}
+            .hiw-grid::before{display:none;}
+            .prop-grid{grid-template-columns:repeat(2,1fr);}
+            .testi-grid{grid-template-columns:repeat(2,1fr);}
         }
 
-        .bg-blob {
-            position: fixed;
-            width: 500px;
-            height: 500px;
-            background: var(--primary-gradient);
-            filter: blur(120px);
-            opacity: 0.15;
-            z-index: -1;
-            border-radius: 50%;
+        /* Mobile: 767px */
+        @media(max-width:767px){
+            :root{--nav-h:62px;}
+            .container{padding:0 16px;}
+
+            /* Nav: hide desktop links/ctas, show burger */
+            .nav__links,.nav__ctas{display:none;}
+            .nav__burger{display:flex;}
+
+            /* Hero: single column, mockup below text */
+            .hero__grid{grid-template-columns:1fr;}
+            .hero__btns{flex-direction:column;}
+            .hero__btns .btn{width:100%;justify-content:center;}
+
+            /* Mockup: scale down nicely */
+            .mockup{padding:14px;}
+            .m-stats{gap:8px;}
+            .m-stat{padding:11px;}
+
+            /* Stats: 2x2 */
+            .stats__grid{grid-template-columns:repeat(2,1fr);gap:20px;}
+
+            /* Features: single col */
+            .feat-grid{grid-template-columns:1fr;}
+
+            /* How it works: single col */
+            .hiw-grid{grid-template-columns:1fr;gap:24px;}
+
+            /* Properties: single col */
+            .prop-grid{grid-template-columns:1fr;}
+
+            /* Testimonials: horizontal scroll snap */
+            .testi-grid{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:14px;padding-bottom:14px;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+            .testi-grid::-webkit-scrollbar{display:none;}
+            .testi-card{min-width:78vw;scroll-snap-align:start;flex-shrink:0;}
+
+            /* Workspace card */
+            .ws-card{grid-template-columns:1fr;}
+
+            /* CTA */
+            .cta-btns{flex-direction:column;}
+            .cta-btns .btn{width:100%;justify-content:center;}
+
+            /* Footer */
+            .footer__grid{grid-template-columns:1fr;gap:28px;}
+            .f-bottom{flex-direction:column;text-align:center;}
+            .f-blnks{justify-content:center;}
         }
 
-        .blob-1 { top: -100px; right: -100px; }
-        .blob-2 { bottom: -100px; left: -100px; }
-
-        .navbar {
-            background: rgba(15, 23, 42, 0.8);
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid var(--glass-border);
-            padding: 1.5rem 0;
+        /* Extra small: 375px */
+        @media(max-width:390px){
+            .hero__h1{font-size:1.95rem;}
+            .s-title{font-size:1.6rem;}
         }
 
-        .navbar-brand img {
-            height: 40px;
-            margin-right: 12px;
-            border-radius: 8px;
-        }
-
-        .hero-section {
-            padding: 120px 0 80px;
-            text-align: center;
-        }
-
-        .glass-card {
-            background: var(--glass-bg);
-            backdrop-filter: blur(16px);
-            border: 1px solid var(--glass-border);
-            border-radius: 24px;
-            padding: 3rem;
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-        }
-
-        .workspace-title {
-            font-weight: 700;
-            font-size: 4rem;
-            background: var(--primary-gradient);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 1.5rem;
-        }
-
-        .badge-pill {
-            background: var(--primary-gradient);
-            padding: 8px 20px;
-            border-radius: 50px;
-            font-size: 0.9rem;
-            font-weight: 600;
-            margin-bottom: 2rem;
-            display: inline-block;
-        }
-
-        .btn-primary-custom {
-            background: var(--primary-gradient);
-            border: none;
-            padding: 14px 32px;
-            border-radius: 12px;
-            font-weight: 600;
-            transition: transform 0.3s ease;
-        }
-
-        .btn-primary-custom:hover {
-            transform: translateY(-3px);
-            color: white;
-            box-shadow: 0 10px 20px rgba(99, 102, 241, 0.4);
-        }
-
-        .features-grid {
-            margin-top: 60px;
-        }
-
-        .feature-item {
-            padding: 2rem;
-            transition: all 0.3s ease;
-        }
-
-        .feature-item i {
-            font-size: 2.5rem;
-            margin-bottom: 1.5rem;
-            background: var(--primary-gradient);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .footer {
-            padding: 40px 0;
-            border-top: 1px solid var(--glass-border);
-            margin-top: 80px;
-        }
-
-        .social-link {
-            color: #94a3b8;
-            font-size: 1.5rem;
-            margin: 0 15px;
-            transition: color 0.3s;
-        }
-
-        .social-link:hover {
-            color: #ffffff;
-        }
-
-        /* Animations */
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .animate-up {
-            animation: fadeIn 0.8s ease forwards;
+        /* Large: 1440px+ */
+        @media(min-width:1440px){
+            .container{max-width:1340px;}
         }
     </style>
 </head>
 <body>
 
-    <div class="bg-blob blob-1"></div>
-    <div class="bg-blob blob-2"></div>
+<div class="orbs">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+</div>
 
-    <nav class="navbar sticky-top">
-        <div class="container d-flex justify-content-between">
-            <a class="navbar-brand fw-bold text-white d-flex align-items-center" href="#">
-                {% if workspace and workspace.logo %}
-                    <img src="{{ workspace.logo.url }}" alt="Logo">
-                {% else %}
-                    <div class="me-2 rounded bg-gradient" style="width: 32px; height: 32px; display: inline-block; background: var(--primary-gradient);"></div>
-                {% endif %}
-                TerraTrail
-            </a>
-            <div>
-                {% if not workspace %}
-                    <a href="/api/v1/auth/register/" class="btn btn-outline-light btn-sm rounded-pill px-4 me-2">Signup</a>
-                {% endif %}
-                <a href="https://terra-trail-frontend.vercel.app/auth/sign-up" class="btn btn-primary-custom btn-sm rounded-pill px-4">API Docs</a>
-            </div>
-        </div>
-    </nav>
-
+<!-- ═══════════════════════════ NAVBAR ═══════════════════════════ -->
+<nav class="nav" id="nav">
     <div class="container">
-        <div class="hero-section">
-            <div class="animate-up">
-                {% if workspace %}
-                    <span class="badge-pill mb-4">Official Workspace</span>
-                    <h1 class="workspace-title">{{ workspace.name }}</h1>
+        <div class="nav__inner">
+            <a class="nav__brand" href="#">
+                {% if workspace and workspace.logo %}
+                    <img src="{{ workspace.logo.url }}" alt="Logo" class="nav__logo">
                 {% else %}
-                    <span class="badge-pill mb-4">Enterprise SaaS Platform</span>
-                    <h1 class="workspace-title">TerraTrail</h1>
+                    <div class="nav__logo-box">T</div>
                 {% endif %}
-                
-                <p class="lead text-secondary mx-auto mb-5" style="max-width: 700px;">
-                    {% if workspace %}
-                        Welcome to the professional property management portal for {{ workspace.name }}. 
-                        Our platform provides seamless automation for estates, subscriptions, and financial tracking.
-                    {% else %}
-                        The all-in-one infrastructure for modern real estate companies. Automate your property listings, 
-                        manage sub-agents, and track customer installments with extreme precision.
-                    {% endif %}
-                </p>
-                
-                <div class="glass-card mb-5">
-                    <div class="row text-center">
-                        {% if workspace %}
-                            <div class="col-md-4 mb-4 mb-md-0">
-                                <h3 class="fw-bold">{{ workspace.region }}</h3>
-                                <p class="text-secondary small text-uppercase">Operating Region</p>
-                            </div>
-                            <div class="col-md-4 mb-4 mb-md-0">
-                                <h3 class="fw-bold">{{ workspace.timezone }}</h3>
-                                <p class="text-secondary small text-uppercase">Active Timezone</p>
-                            </div>
-                            <div class="col-md-4">
-                                <h3 class="fw-bold">{{ workspace.billing_plan }}</h3>
-                                <p class="text-secondary small text-uppercase">Service tier</p>
-                            </div>
-                        {% else %}
-                            <div class="col-md-4 mb-4 mb-md-0">
-                                <h3 class="fw-bold">99.9%</h3>
-                                <p class="text-secondary small text-uppercase">Uptime SLA</p>
-                            </div>
-                            <div class="col-md-4 mb-4 mb-md-0">
-                                <h3 class="fw-bold">Secured</h3>
-                                <p class="text-secondary small text-uppercase">Multi-tenant Isolation</p>
-                            </div>
-                            <div class="col-md-4">
-                                <h3 class="fw-bold">Fast</h3>
-                                <p class="text-secondary small text-uppercase">Sub-second Latency</p>
-                            </div>
-                        {% endif %}
-                    </div>
-                </div>
+                {% if workspace %}{{ workspace.name }}{% else %}TerraTrail{% endif %}
+            </a>
 
-                <div class="d-flex justify-content-center gap-3">
+            <ul class="nav__links">
+                <li><a href="#features">Features</a></li>
+                <li><a href="#how-it-works">How it Works</a></li>
+                <li><a href="#properties">Properties</a></li>
+                {% if workspace and workspace.support_email %}
+                <li><a href="mailto:{{ workspace.support_email }}">Contact</a></li>
+                {% endif %}
+            </ul>
+
+            <div class="nav__ctas">
+                {% if workspace %}
+                    {% if workspace.support_whatsapp %}
+                    <a href="https://wa.me/{{ workspace.support_whatsapp }}" target="_blank" class="btn btn-primary btn-sm">
+                        <i class="fab fa-whatsapp"></i> Chat with Us
+                    </a>
+                    {% endif %}
+                {% else %}
+                    <a href="/api/v1/auth/register/" class="btn btn-ghost btn-sm">Sign Up</a>
+                    <a href="https://terra-trail-frontend.vercel.app/auth/sign-up" class="btn btn-primary btn-sm">
+                        Get Started <i class="fas fa-arrow-right"></i>
+                    </a>
+                {% endif %}
+            </div>
+
+            <button class="nav__burger" id="burger" aria-label="Toggle menu" aria-expanded="false">
+                <span></span><span></span><span></span>
+            </button>
+        </div>
+    </div>
+
+    <div class="nav__mobile" id="mob-menu">
+        <nav>
+            <a href="#features"><i class="fas fa-bolt"></i> Features</a>
+            <a href="#how-it-works"><i class="fas fa-route"></i> How it Works</a>
+            <a href="#properties"><i class="fas fa-building"></i> Properties</a>
+            {% if workspace and workspace.support_email %}
+            <a href="mailto:{{ workspace.support_email }}"><i class="fas fa-envelope"></i> Contact</a>
+            {% endif %}
+        </nav>
+        <div class="nav__mobile-actions">
+            {% if workspace %}
+                {% if workspace.support_whatsapp %}
+                <a href="https://wa.me/{{ workspace.support_whatsapp }}" target="_blank" class="btn btn-primary btn-full">
+                    <i class="fab fa-whatsapp"></i> Chat on WhatsApp
+                </a>
+                {% endif %}
+                {% if workspace.support_email %}
+                <a href="mailto:{{ workspace.support_email }}" class="btn btn-ghost btn-full">
+                    <i class="fas fa-envelope"></i> Email Support
+                </a>
+                {% endif %}
+            {% else %}
+                <a href="https://terra-trail-frontend.vercel.app/auth/sign-up" class="btn btn-primary btn-full">
+                    Get Started Free <i class="fas fa-arrow-right"></i>
+                </a>
+                <a href="/api/v1/auth/register/" class="btn btn-ghost btn-full">Sign Up via API</a>
+            {% endif %}
+        </div>
+    </div>
+</nav>
+
+<!-- ═══════════════════════════ HERO ═══════════════════════════ -->
+<section class="hero">
+    <div class="container">
+        <div class="hero__grid">
+            <!-- Text -->
+            <div class="rv">
+                {% if workspace %}
+                    <div class="hero__badge"><div class="hero__badge-dot"></div> Official Workspace</div>
+                    <h1 class="hero__h1">Welcome to<br><span class="grad-text">{{ workspace.name }}</span></h1>
+                    <p class="hero__sub">Your professional real estate management portal. Track properties, manage installments, and coordinate with your team — all in one place.</p>
+                {% else %}
+                    <div class="hero__badge"><div class="hero__badge-dot"></div> Real Estate SaaS Platform</div>
+                    <h1 class="hero__h1">Manage Properties<br><span class="grad-text">Smarter & Faster</span></h1>
+                    <p class="hero__sub">The all-in-one infrastructure for modern real estate companies. Automate listings, manage agents, and track installments with precision.</p>
+                {% endif %}
+
+                <div class="hero__btns">
                     {% if workspace %}
                         {% if workspace.support_whatsapp %}
-                        <a href="https://wa.me/{{ workspace.support_whatsapp }}" target="_blank" class="btn btn-primary-custom">
-                            <i class="fab fa-whatsapp me-2"></i> Contact Support
+                        <a href="https://wa.me/{{ workspace.support_whatsapp }}" target="_blank" class="btn btn-primary btn-lg">
+                            <i class="fab fa-whatsapp"></i> Chat on WhatsApp
                         </a>
                         {% endif %}
-                        <a href="mailto:{{ workspace.support_email }}" class="btn btn-outline-light btn-lg rounded-pill px-4 py-3" style="font-size: 1rem;">
-                            <i class="far fa-envelope me-2"></i> Email Us
+                        <a href="mailto:{{ workspace.support_email }}" class="btn btn-ghost btn-lg">
+                            <i class="fas fa-envelope"></i> Email Us
                         </a>
                     {% else %}
-                        <a href="/api/v1/auth/register/" class="btn btn-primary-custom">
-                            Get Started Now
+                        <a href="https://terra-trail-frontend.vercel.app/auth/sign-up" class="btn btn-primary btn-lg">
+                            Start for Free <i class="fas fa-arrow-right"></i>
                         </a>
-                        <a href="/api/v1/docs/" class="btn btn-outline-light btn-lg rounded-pill px-4 py-3" style="font-size: 1rem;">
-                            View Documentation
+                        <a href="/api/v1/docs/" class="btn btn-ghost btn-lg">
+                            <i class="fas fa-book"></i> API Docs
                         </a>
                     {% endif %}
                 </div>
+
+                <div class="hero__proof">
+                    <div class="hero__avs">
+                        <div class="hero__av" style="background:linear-gradient(135deg,#6366f1,#a855f7);">E</div>
+                        <div class="hero__av" style="background:linear-gradient(135deg,#10b981,#0ea5e9);">K</div>
+                        <div class="hero__av" style="background:linear-gradient(135deg,#f59e0b,#ef4444);">A</div>
+                    </div>
+                    <p class="hero__proof-txt">
+                        {% if workspace %}
+                            <strong>Active workspace</strong> · {{ workspace.region }}
+                        {% else %}
+                            <strong>Trusted by 200+ agents</strong> across Nigeria
+                        {% endif %}
+                    </p>
+                </div>
             </div>
 
-            <div class="row features-grid animate-up" style="animation-delay: 0.2s;">
-                <div class="col-md-4">
-                    <div class="feature-item">
-                        <i class="fas fa-layer-group"></i>
-                        <h5>Smart Inventory</h5>
-                        <p class="text-secondary">Real-time tracking of plots and estate units with instant availability status.</p>
+            <!-- Mockup -->
+            <div class="rv float-wrap" style="transition-delay:.14s;">
+                <div class="mockup">
+                    <div class="mockup-bar">
+                        <div class="mdot"></div><div class="mdot"></div><div class="mdot"></div>
+                        <span class="mtitle">TerraTrail — Dashboard</span>
+                    </div>
+                    <div class="m-stats">
+                        <div class="m-stat"><div class="m-stat-lbl">Properties</div><div class="m-stat-val c-green">247</div></div>
+                        <div class="m-stat"><div class="m-stat-lbl">Customers</div><div class="m-stat-val c-blue">1,842</div></div>
+                        <div class="m-stat"><div class="m-stat-lbl">Revenue</div><div class="m-stat-val c-gold">₦8.4M</div></div>
+                        <div class="m-stat"><div class="m-stat-lbl">Agents</div><div class="m-stat-val c-violet">38</div></div>
+                    </div>
+                    <div class="m-chart">
+                        <div class="m-chart-lbl">Monthly Sales Performance</div>
+                        <div class="m-bars">
+                            <div class="m-bar" style="height:40%"></div>
+                            <div class="m-bar" style="height:55%"></div>
+                            <div class="m-bar" style="height:48%"></div>
+                            <div class="m-bar" style="height:72%"></div>
+                            <div class="m-bar" style="height:62%"></div>
+                            <div class="m-bar" style="height:88%"></div>
+                            <div class="m-bar" style="height:76%"></div>
+                        </div>
+                    </div>
+                    <div class="m-list">
+                        <div class="m-row">
+                            <div class="m-icon"><i class="fas fa-map-marker-alt"></i></div>
+                            <div style="flex:1"><div class="m-name">Lekki Phase 2 — Plot C4</div><div class="m-sub">Lagos · 450 sqm</div></div>
+                            <span class="m-badge b-green">Available</span>
+                        </div>
+                        <div class="m-row">
+                            <div class="m-icon"><i class="fas fa-home"></i></div>
+                            <div style="flex:1"><div class="m-name">Abuja Estate — Unit 7B</div><div class="m-sub">FCT · 4 Bedroom</div></div>
+                            <span class="m-badge b-amber">Reserved</span>
+                        </div>
                     </div>
                 </div>
-                <div class="col-md-4">
-                    <div class="feature-item">
-                        <i class="fas fa-credit-card"></i>
-                        <h5>Automated Payments</h5>
-                        <p class="text-secondary">Seamless installment management with automated reminders and receipt generation.</p>
-                    </div>
+
+                <div class="fcard fcard-1">
+                    <div class="ficon ficon-g"><i class="fas fa-check"></i></div>
+                    <div><strong>Payment Received</strong><span>₦250,000 installment</span></div>
                 </div>
-                <div class="col-md-4">
-                    <div class="feature-item">
-                        <i class="fas fa-chart-line"></i>
-                        <h5>Agent Network</h5>
-                        <p class="text-secondary">Powerful referral tracking and commission management for your sales force.</p>
-                    </div>
+                <div class="fcard fcard-2">
+                    <div class="ficon ficon-a"><i class="fas fa-users"></i></div>
+                    <div><strong>+12 New Clients</strong><span>This week</span></div>
                 </div>
             </div>
         </div>
     </div>
+</section>
 
-    <footer class="footer text-center">
-        <div class="container">
-            <div class="mb-4">
-                {% if workspace.website_url %}
-                <a href="{{ workspace.website_url }}" class="social-link"><i class="fas fa-globe"></i></a>
-                {% endif %}
-                {% if workspace.instagram_url %}
-                <a href="{{ workspace.instagram_url }}" class="social-link"><i class="fab fa-instagram"></i></a>
-                {% endif %}
+<!-- ═══════════════════════════ STATS BAR ═══════════════════════════ -->
+<div class="stats">
+    <div class="container">
+        <div class="stats__grid">
+            <div class="rv"><div class="s-num">99.9%</div><div class="s-lbl">Uptime SLA</div></div>
+            <div class="rv" style="transition-delay:.08s"><div class="s-num">50K+</div><div class="s-lbl">Properties Tracked</div></div>
+            <div class="rv" style="transition-delay:.16s"><div class="s-num">200+</div><div class="s-lbl">Active Workspaces</div></div>
+            <div class="rv" style="transition-delay:.24s"><div class="s-num">₦2B+</div><div class="s-lbl">Transactions Processed</div></div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════ WORKSPACE INFO (workspace only) ═══════════════════════════ -->
+{% if workspace %}
+<div class="container" style="padding-top:clamp(48px,6vw,72px);">
+    <div class="ws-card rv">
+        <div class="ws-card-item"><h3>{{ workspace.region }}</h3><p>Operating Region</p></div>
+        <div class="ws-card-item"><h3>{{ workspace.timezone }}</h3><p>Active Timezone</p></div>
+        <div class="ws-card-item"><h3>{{ workspace.billing_plan }}</h3><p>Service Tier</p></div>
+    </div>
+</div>
+{% endif %}
+
+<!-- ═══════════════════════════ FEATURES ═══════════════════════════ -->
+<section class="sec" id="features">
+    <div class="container">
+        <div class="s-head rv">
+            <div class="s-tag"><i class="fas fa-bolt"></i> Features</div>
+            <h2 class="s-title">Everything you need to run<br>your real estate business</h2>
+            <p class="s-desc">From property listings to commission payouts — TerraTrail handles it all so your team can focus on closing deals.</p>
+        </div>
+        <div class="feat-grid">
+            <div class="feat-card rv">
+                <div class="feat-icon fi-em"><i class="fas fa-layer-group"></i></div>
+                <h3>Smart Property Inventory</h3>
+                <p>Real-time tracking of plots, estate units, and all property types with live availability, pricing, and status updates.</p>
             </div>
-            <p class="text-secondary small">
-                &copy; 2024 {{ workspace.name }} &bull; Powered by <span class="text-white fw-bold">TerraTrail SaaS</span>
+            <div class="feat-card rv" style="transition-delay:.05s">
+                <div class="feat-icon fi-sky"><i class="fas fa-credit-card"></i></div>
+                <h3>Installment Management</h3>
+                <p>Automate payment schedules, send reminders, and generate receipts — zero manual effort on every installment plan.</p>
+            </div>
+            <div class="feat-card rv" style="transition-delay:.1s">
+                <div class="feat-icon fi-gold"><i class="fas fa-users"></i></div>
+                <h3>Agent Network & Referrals</h3>
+                <p>Powerful referral tracking with transparent commission calculations and automated payout management for your sales force.</p>
+            </div>
+            <div class="feat-card rv" style="transition-delay:.15s">
+                <div class="feat-icon fi-vio"><i class="fas fa-shield-alt"></i></div>
+                <h3>Multi-tenant Security</h3>
+                <p>Enterprise-grade workspace isolation with role-based access controls. Each company's data is fully separated.</p>
+            </div>
+            <div class="feat-card rv" style="transition-delay:.2s">
+                <div class="feat-icon fi-rose"><i class="fas fa-bell"></i></div>
+                <h3>Smart Notifications</h3>
+                <p>Automated WhatsApp and email alerts for due payments, new listings, agent activity, and every critical event.</p>
+            </div>
+            <div class="feat-card rv" style="transition-delay:.25s">
+                <div class="feat-icon fi-cyan"><i class="fas fa-chart-bar"></i></div>
+                <h3>Analytics & Reporting</h3>
+                <p>Deep financial insights, sales performance dashboards, and custom reports to guide every business decision.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════════════ HOW IT WORKS ═══════════════════════════ -->
+<section class="sec sec-alt" id="how-it-works">
+    <div class="container">
+        <div class="s-head rv">
+            <div class="s-tag"><i class="fas fa-route"></i> Process</div>
+            <h2 class="s-title">Up and running<br>in three steps</h2>
+            <p class="s-desc">Getting started with TerraTrail is fast. Most workspaces are fully onboarded within a day.</p>
+        </div>
+        <div class="hiw-grid">
+            <div class="hiw-step rv">
+                <div class="hiw-num">1</div>
+                <h3>Create Your Workspace</h3>
+                <p>Sign up and configure your company workspace with branding, region, timezone, and service plan in minutes.</p>
+            </div>
+            <div class="hiw-step rv" style="transition-delay:.1s">
+                <div class="hiw-num">2</div>
+                <h3>Add Properties & Agents</h3>
+                <p>Import your property inventory, invite sales agents and team members, and define roles and commission structures.</p>
+            </div>
+            <div class="hiw-step rv" style="transition-delay:.2s">
+                <div class="hiw-num">3</div>
+                <h3>Start Selling & Tracking</h3>
+                <p>Go live. TerraTrail automates payment tracking, sends notifications, and keeps every stakeholder informed in real time.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════════════ PROPERTIES SHOWCASE ═══════════════════════════ -->
+<section class="sec" id="properties">
+    <div class="container">
+        <div class="s-head rv">
+            <div class="s-tag"><i class="fas fa-building"></i> Properties</div>
+            <h2 class="s-title">
+                {% if workspace %}Explore {{ workspace.name }}'s Listings{% else %}Showcase your portfolio<br>with style{% endif %}
+            </h2>
+            <p class="s-desc">
+                {% if workspace %}Browse available properties and reach out to our team to get started.
+                {% else %}Beautiful, responsive property cards your customers will love on any device.{% endif %}
             </p>
         </div>
-    </footer>
+        <div class="prop-grid">
+            <div class="prop-card rv">
+                <div class="prop-img">
+                    <div class="prop-img-ph"><i class="fas fa-map-marked-alt"></i><span>Land / Plot</span></div>
+                    <span class="prop-tag pt-avail">Available</span>
+                </div>
+                <div class="prop-body">
+                    <div class="prop-type">Residential Land</div>
+                    <div class="prop-name">Lekki Pearl Gardens — Plot C4</div>
+                    <div class="prop-loc"><i class="fas fa-map-marker-alt"></i> Lekki, Lagos State</div>
+                    <div class="prop-meta">
+                        <div class="prop-mi"><i class="fas fa-ruler-combined"></i> 450 sqm</div>
+                        <div class="prop-mi"><i class="fas fa-certificate"></i> C of O</div>
+                        <div class="prop-mi"><i class="fas fa-calendar-check"></i> Ready</div>
+                    </div>
+                </div>
+                <div class="prop-foot">
+                    <div class="prop-price">₦12,500,000</div>
+                    <div class="prop-arrow"><i class="fas fa-arrow-right"></i></div>
+                </div>
+            </div>
 
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
-    <script>
-        // Subtle Mouse Move Effect
-        document.addEventListener('mousemove', (e) => {
-            const blobs = document.querySelectorAll('.bg-blob');
-            const x = e.clientX / window.innerWidth;
-            const y = e.clientY / window.innerHeight;
-            
-            blobs[0].style.transform = `translate(${x * 50}px, ${y * 50}px)`;
-            blobs[1].style.transform = `translate(${-x * 50}px, ${-y * 50}px)`;
-        });
-    </script>
+            <div class="prop-card rv" style="transition-delay:.1s">
+                <div class="prop-img">
+                    <div class="prop-img-ph"><i class="fas fa-home"></i><span>Duplex</span></div>
+                    <span class="prop-tag pt-res">Reserved</span>
+                </div>
+                <div class="prop-body">
+                    <div class="prop-type">Semi-detached Duplex</div>
+                    <div class="prop-name">Greenfield Estate — Unit 7B</div>
+                    <div class="prop-loc"><i class="fas fa-map-marker-alt"></i> Gwarinpa, Abuja FCT</div>
+                    <div class="prop-meta">
+                        <div class="prop-mi"><i class="fas fa-bed"></i> 4 Beds</div>
+                        <div class="prop-mi"><i class="fas fa-bath"></i> 3 Baths</div>
+                        <div class="prop-mi"><i class="fas fa-car"></i> Parking</div>
+                    </div>
+                </div>
+                <div class="prop-foot">
+                    <div class="prop-price">₦45,000,000</div>
+                    <div class="prop-arrow"><i class="fas fa-arrow-right"></i></div>
+                </div>
+            </div>
+
+            <div class="prop-card rv" style="transition-delay:.2s">
+                <div class="prop-img">
+                    <div class="prop-img-ph"><i class="fas fa-building"></i><span>Commercial</span></div>
+                    <span class="prop-tag pt-avail">Available</span>
+                </div>
+                <div class="prop-body">
+                    <div class="prop-type">Commercial Space</div>
+                    <div class="prop-name">Victoria Heights — Shop 12</div>
+                    <div class="prop-loc"><i class="fas fa-map-marker-alt"></i> Victoria Island, Lagos</div>
+                    <div class="prop-meta">
+                        <div class="prop-mi"><i class="fas fa-ruler-combined"></i> 80 sqm</div>
+                        <div class="prop-mi"><i class="fas fa-bolt"></i> 24/7 Power</div>
+                        <div class="prop-mi"><i class="fas fa-shield-alt"></i> Secured</div>
+                    </div>
+                </div>
+                <div class="prop-foot">
+                    <div class="prop-price">₦8,200,000</div>
+                    <div class="prop-arrow"><i class="fas fa-arrow-right"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════════════ TESTIMONIALS ═══════════════════════════ -->
+<section class="sec sec-alt">
+    <div class="container">
+        <div class="s-head rv">
+            <div class="s-tag"><i class="fas fa-star"></i> Testimonials</div>
+            <h2 class="s-title">Trusted by real estate<br>professionals</h2>
+            <p class="s-desc">See why hundreds of property companies across Nigeria rely on TerraTrail every day.</p>
+        </div>
+        <div class="testi-grid">
+            <div class="testi-card rv">
+                <div class="stars"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
+                <p class="testi-txt">"TerraTrail completely changed how we manage installment payments. No more spreadsheets, no more missed reminders. Our customers love the automated receipts."</p>
+                <div class="testi-auth">
+                    <div class="testi-av" style="background:linear-gradient(135deg,#10b981,#0ea5e9);">AK</div>
+                    <div><div class="testi-name">Adebayo Kehinde</div><div class="testi-role">MD, Landmark Properties Ltd</div></div>
+                </div>
+            </div>
+            <div class="testi-card rv" style="transition-delay:.1s">
+                <div class="stars"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
+                <p class="testi-txt">"The agent referral system is incredible. We grew our sales network by 3x in 4 months because every agent could track their own commissions in real time."</p>
+                <div class="testi-auth">
+                    <div class="testi-av" style="background:linear-gradient(135deg,#8b5cf6,#ec4899);">FO</div>
+                    <div><div class="testi-name">Funmi Okonkwo</div><div class="testi-role">CEO, Apex Realty Group</div></div>
+                </div>
+            </div>
+            <div class="testi-card rv" style="transition-delay:.2s">
+                <div class="stars"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star-half-alt"></i></div>
+                <p class="testi-txt">"Setup was seamless and support is excellent. A single dashboard for all properties, customers, and payments made our operations 10x more efficient."</p>
+                <div class="testi-auth">
+                    <div class="testi-av" style="background:linear-gradient(135deg,#f59e0b,#ef4444);">TE</div>
+                    <div><div class="testi-name">Tunde Eze</div><div class="testi-role">Director, Emerald Homes NG</div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════════════ CTA ═══════════════════════════ -->
+<section class="sec">
+    <div class="container">
+        <div class="cta-card rv">
+            <h2>Ready to grow your<br><span class="grad-text">real estate business?</span></h2>
+            <p>
+                {% if workspace %}Get in touch with the {{ workspace.name }} team. We're ready to help you find your perfect property.
+                {% else %}Join hundreds of real estate companies already using TerraTrail to close more deals and automate their operations.{% endif %}
+            </p>
+            <div class="cta-btns">
+                {% if workspace %}
+                    {% if workspace.support_whatsapp %}
+                    <a href="https://wa.me/{{ workspace.support_whatsapp }}" target="_blank" class="btn btn-primary btn-lg">
+                        <i class="fab fa-whatsapp"></i> Start on WhatsApp
+                    </a>
+                    {% endif %}
+                    <a href="mailto:{{ workspace.support_email }}" class="btn btn-ghost btn-lg">
+                        <i class="fas fa-envelope"></i> Send Email
+                    </a>
+                {% else %}
+                    <a href="https://terra-trail-frontend.vercel.app/auth/sign-up" class="btn btn-primary btn-lg">
+                        Get Started Free <i class="fas fa-arrow-right"></i>
+                    </a>
+                    <a href="/api/v1/docs/" class="btn btn-ghost btn-lg">
+                        <i class="fas fa-book"></i> View Docs
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════════════ FOOTER ═══════════════════════════ -->
+<footer class="footer">
+    <div class="container">
+        <div class="footer__grid">
+            <div>
+                <div class="f-brand">
+                    <div class="f-logo">T</div>
+                    {% if workspace %}{{ workspace.name }}{% else %}TerraTrail{% endif %}
+                </div>
+                <p class="f-desc">The modern real estate management platform. Built for property companies that want to scale without the chaos.</p>
+                <div class="f-socials">
+                    {% if workspace and workspace.website_url %}
+                    <a href="{{ workspace.website_url }}" class="f-soc" target="_blank" aria-label="Website"><i class="fas fa-globe"></i></a>
+                    {% endif %}
+                    {% if workspace and workspace.instagram_url %}
+                    <a href="{{ workspace.instagram_url }}" class="f-soc" target="_blank" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+                    {% endif %}
+                    {% if workspace and workspace.support_whatsapp %}
+                    <a href="https://wa.me/{{ workspace.support_whatsapp }}" class="f-soc" target="_blank" aria-label="WhatsApp"><i class="fab fa-whatsapp"></i></a>
+                    {% endif %}
+                    {% if not workspace %}
+                    <a href="#" class="f-soc" aria-label="Twitter"><i class="fab fa-twitter"></i></a>
+                    <a href="#" class="f-soc" aria-label="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
+                    <a href="#" class="f-soc" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="f-col">
+                <h4>Platform</h4>
+                <ul class="f-links">
+                    <li><a href="#features">Features</a></li>
+                    <li><a href="#how-it-works">How it Works</a></li>
+                    <li><a href="#properties">Properties</a></li>
+                    <li><a href="/api/v1/docs/">API Docs</a></li>
+                </ul>
+            </div>
+
+            <div class="f-col">
+                <h4>Company</h4>
+                <ul class="f-links">
+                    <li><a href="#">About TerraTrail</a></li>
+                    <li><a href="#">Pricing</a></li>
+                    <li><a href="#">Careers</a></li>
+                    <li><a href="#">Blog</a></li>
+                </ul>
+            </div>
+
+            <div class="f-col">
+                <h4>Get in Touch</h4>
+                <ul class="f-links">
+                    {% if workspace and workspace.support_email %}
+                    <li><a href="mailto:{{ workspace.support_email }}">{{ workspace.support_email }}</a></li>
+                    {% else %}
+                    <li><a href="mailto:hello@terratrail.io">hello@terratrail.io</a></li>
+                    {% endif %}
+                    {% if workspace and workspace.support_whatsapp %}
+                    <li><a href="https://wa.me/{{ workspace.support_whatsapp }}" target="_blank">WhatsApp Support</a></li>
+                    {% endif %}
+                    <li><a href="/api/v1/auth/register/">Start Free Trial</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="f-bottom">
+            <p class="f-copy">
+                &copy; {% now "Y" %} {% if workspace %}{{ workspace.name }} &bull; {% endif %}Powered by <strong>TerraTrail SaaS</strong>
+            </p>
+            <div class="f-blnks">
+                <a href="#">Privacy Policy</a>
+                <a href="#">Terms of Service</a>
+                <a href="#">Cookie Policy</a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<script>
+    // Hamburger
+    const burger = document.getElementById('burger');
+    const mobMenu = document.getElementById('mob-menu');
+    burger.addEventListener('click', () => {
+        const open = mobMenu.classList.toggle('open');
+        burger.classList.toggle('open');
+        burger.setAttribute('aria-expanded', open);
+    });
+    mobMenu.querySelectorAll('a').forEach(a => a.addEventListener('click', () => {
+        mobMenu.classList.remove('open');
+        burger.classList.remove('open');
+        burger.setAttribute('aria-expanded', false);
+    }));
+
+    // Navbar scroll tint
+    const nav = document.getElementById('nav');
+    window.addEventListener('scroll', () => {
+        nav.classList.toggle('scrolled', window.scrollY > 40);
+    }, { passive: true });
+
+    // Scroll reveal
+    const obs = new IntersectionObserver(entries => {
+        entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); obs.unobserve(e.target); } });
+    }, { threshold: 0.1, rootMargin: '0px 0px -36px 0px' });
+    document.querySelectorAll('.rv').forEach(el => obs.observe(el));
+
+    // Orb parallax
+    document.addEventListener('mousemove', e => {
+        const x = e.clientX / innerWidth - .5, y = e.clientY / innerHeight - .5;
+        document.querySelector('.orb-1').style.transform = `translate(${x*36}px,${y*36}px)`;
+        document.querySelector('.orb-2').style.transform = `translate(${-x*28}px,${-y*28}px)`;
+    }, { passive: true });
+</script>
 </body>
 </html>

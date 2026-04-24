@@ -480,3 +480,70 @@ class PlanUsageView(APIView):
     def get(self, request):
         usage = PlanGuard.get_usage(request.user, request.workspace)
         return Response(usage)
+
+
+# ---------------------------------------------------------------------------
+# Workspace Events — recent actionable items for the notification bell
+# ---------------------------------------------------------------------------
+
+class WorkspaceEventsView(APIView):
+    """
+    GET /api/v1/workspaces/events/
+
+    Returns recent workspace events (pending inspections + new customers)
+    for use in the notification bell. Admin/staff only.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from datetime import timedelta
+        from django.utils import timezone
+        from customers.site_inspection_models import SiteInspection
+        from customers.models import Customer
+
+        events = []
+
+        # Pending site inspections
+        pending = (
+            SiteInspection.objects.filter(
+                workspace=request.workspace,
+                status="PENDING",
+            )
+            .order_by("-created_at")[:10]
+        )
+        for insp in pending:
+            events.append({
+                "id": f"insp-{insp.id}",
+                "type": "inspection",
+                "title": "Site Inspection Request",
+                "subtitle": insp.property_name or (insp.linked_property.name if insp.linked_property else insp.name),
+                "detail": f"{insp.name} · {insp.inspection_date}",
+                "created_at": insp.created_at.isoformat(),
+                "href": "/site-inspection",
+            })
+
+        # Customers added in last 7 days
+        cutoff = timezone.now() - timedelta(days=7)
+        new_customers = (
+            Customer.objects.filter(
+                workspace=request.workspace,
+                created_at__gte=cutoff,
+            )
+            .order_by("-created_at")[:10]
+        )
+        for cust in new_customers:
+            events.append({
+                "id": f"cust-{cust.id}",
+                "type": "customer",
+                "title": "New Customer",
+                "subtitle": f"{cust.first_name} {cust.last_name}".strip() or cust.email,
+                "detail": cust.email,
+                "created_at": cust.created_at.isoformat(),
+                "href": "/customers",
+            })
+
+        # Sort by created_at descending
+        events.sort(key=lambda e: e["created_at"], reverse=True)
+
+        return Response({"events": events[:20], "count": len(events)})

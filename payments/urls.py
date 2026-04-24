@@ -7,8 +7,10 @@ from payments.views import (
     ApprovePaymentView,
     PaymentDetailView,
     PaymentListView,
+    PaystackBanksListView,
     RecordPaymentView,
     RejectPaymentView,
+    ResolveAccountView,
 )
 
 app_name = "payments"
@@ -19,4 +21,6 @@ urlpatterns = [
     path("<uuid:id>/", PaymentDetailView.as_view(), name="payment-detail"),
     path("<uuid:id>/approve/", ApprovePaymentView.as_view(), name="payment-approve"),
     path("<uuid:id>/reject/", RejectPaymentView.as_view(), name="payment-reject"),
+    path("verify-account/", ResolveAccountView.as_view(), name="verify-account"),
+    path("banks/", PaystackBanksListView.as_view(), name="banks-list"),
 ]

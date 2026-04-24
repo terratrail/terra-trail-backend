@@ -6,12 +6,15 @@ from django.urls import path
 from properties.views import (
     BankAccountDetailView,
     BankAccountListCreateView,
+    InspectionConfigView,
     PricingPlanActivateView,
     PricingPlanDeactivateView,
     PricingPlanDetailView,
     PricingPlanListCreateView,
     PropertyAmenityDetailView,
     PropertyAmenityListCreateView,
+    PropertyAppreciationDetailView,
+    PropertyAppreciationListCreateView,
     PropertyDetailView,
     PropertyDocumentDetailView,
     PropertyDocumentListCreateView,
@@ -52,4 +55,11 @@ urlpatterns = [
     # Gallery images  (?property_id=<uuid> to filter)
     path("gallery/", PropertyGalleryListCreateView.as_view(), name="gallery-list-create"),
     path("gallery/<uuid:id>/", PropertyGalleryDetailView.as_view(), name="gallery-detail"),
+
+    # Inspection Config (per property)
+    path("<uuid:id>/inspection-config/", InspectionConfigView.as_view(), name="inspection-config"),
+
+    # Appreciation records
+    path("<uuid:id>/appreciations/", PropertyAppreciationListCreateView.as_view(), name="appreciation-list-create"),
+    path("<uuid:id>/appreciations/<uuid:appr_id>/", PropertyAppreciationDetailView.as_view(), name="appreciation-detail"),
 ]

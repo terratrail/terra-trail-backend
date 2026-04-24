@@ -281,9 +281,16 @@ class PropertyDocument(WorkspaceScopedModel):
     """
 
     class DocumentType(models.TextChoices):
-        C_OF_O = "C_OF_O", "Certificate of Occupancy (C of O)"
-        DEED_OF_ASSIGNMENT = "DEED_OF_ASSIGNMENT", "Deed of Assignment"
+        PROVISIONAL_SURVEY = "PROVISIONAL_SURVEY", "Provisional Survey"
+        REGISTERED_SURVEY = "REGISTERED_SURVEY", "Registered Survey"
         SURVEY_PLAN = "SURVEY_PLAN", "Survey Plan"
+        C_OF_O = "C_OF_O", "Certificate of Occupancy (CofO)"
+        ALLOCATION_LETTER = "ALLOCATION_LETTER", "Allocation Letter"
+        CONTRACT_OF_SALES = "CONTRACT_OF_SALES", "Contract of Sales"
+        LAND_RECEIPT = "LAND_RECEIPT", "Land Receipt"
+        DEED_OF_ASSIGNMENT = "DEED_OF_ASSIGNMENT", "Deed of Assignment"
+        GOVERNORS_CONSENT = "GOVERNORS_CONSENT", "Governor's Consent"
+        EXCISION = "EXCISION", "Excision"
         OTHER = "OTHER", "Other"
 
     class Status(models.TextChoices):
@@ -396,3 +403,78 @@ class LandSize(WorkspaceScopedModel):
 
     def __str__(self):
         return f"{self.land_size} SQM × {self.total_slots} slots ({self.property.name})"
+
+
+class InspectionConfig(WorkspaceScopedModel):
+    """
+    Per-property inspection configuration set by workspace admin.
+    Defines meeting points, available days/times, and capacity for site visits.
+    """
+
+    DAYS = [
+        ("MON", "Monday"), ("TUE", "Tuesday"), ("WED", "Wednesday"),
+        ("THU", "Thursday"), ("FRI", "Friday"), ("SAT", "Saturday"), ("SUN", "Sunday"),
+    ]
+
+    property = models.OneToOneField(
+        Property,
+        on_delete=models.CASCADE,
+        related_name="inspection_config",
+    )
+    meeting_point = models.CharField(max_length=500, blank=True, default="")
+    virtual_link = models.URLField(max_length=500, blank=True, default="")
+    available_days = models.JSONField(
+        default=list,
+        help_text='e.g. ["MON","WED","FRI"]',
+    )
+    time_from = models.TimeField(null=True, blank=True)
+    time_to = models.TimeField(null=True, blank=True)
+    max_persons = models.PositiveSmallIntegerField(default=5)
+    notes = models.TextField(blank=True, default="")
+
+    class Meta:
+        verbose_name = "Inspection Configuration"
+        indexes = [
+            models.Index(fields=["workspace", "property"]),
+        ]
+
+    def __str__(self):
+        return f"Inspection config for {self.property.name}"
+
+
+class PropertyAppreciation(WorkspaceScopedModel):
+    """
+    Records a price appreciation/depreciation event for a property.
+    Tracked over time to show value growth to potential buyers.
+    """
+
+    property = models.ForeignKey(
+        Property,
+        on_delete=models.CASCADE,
+        related_name="appreciations",
+    )
+    effective_date = models.DateField()
+    old_price = models.DecimalField(max_digits=14, decimal_places=2)
+    new_price = models.DecimalField(max_digits=14, decimal_places=2)
+    percentage_change = models.DecimalField(
+        max_digits=7, decimal_places=4,
+        help_text="Auto-computed: ((new_price - old_price) / old_price) × 100",
+    )
+    notes = models.TextField(blank=True, default="")
+
+    class Meta:
+        ordering = ["-effective_date"]
+        indexes = [
+            models.Index(fields=["workspace", "property"]),
+            models.Index(fields=["effective_date"]),
+        ]
+
+    def save(self, *args, **kwargs):
+        if self.old_price and self.old_price != 0:
+            self.percentage_change = ((self.new_price - self.old_price) / self.old_price) * 100
+        else:
+            self.percentage_change = Decimal("0")
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.property.name}: {self.old_price} → {self.new_price} on {self.effective_date}"
