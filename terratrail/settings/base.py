@@ -273,7 +273,7 @@ CORS_ALLOWED_ORIGINS = config(
     default=(
         "http://localhost:3000,http://127.0.0.1:3000,"
         "http://localhost:5173,http://127.0.0.1:5173,"
-        "https://terra-trail-frontend.vercel.app"
+        "https://terra-trail.vercel.app"
     ),
     cast=Csv(),
 )
@@ -397,13 +397,13 @@ LOGGING = {
         # so 200/304 static-file requests don't fill the console.
         "django.server": {
             "handlers": ["console"],
-            "level": "WARNING",
+            "level": "INFO",
             "propagate": False,
         },
         # 5xx errors from request handling → email admins + error file
         "django.request": {
             "handlers": ["mail_admins", "error_file"],
-            "level": "ERROR",
+            "level": "INFO",
             "propagate": False,
         },
         # ── Project loggers ────────────────────────────────────────────────
