@@ -2,7 +2,7 @@
 Properties views — CRUD and status management endpoints.
 """
 
-from django.db.models import Count
+from django.db.models import Count, Min
 from django.utils.decorators import method_decorator
 from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
@@ -58,7 +58,12 @@ class PropertyListCreateView(generics.ListCreateAPIView):
         return (
             Property.objects.filter(workspace=self.request.workspace)
             .select_related("location")
-            .annotate(pricing_plans_count=Count("pricing_plans"))
+            .prefetch_related("land_sizes", "pricing_plans")
+            .annotate(
+                pricing_plans_count=Count("pricing_plans", distinct=True),
+                subscription_count=Count("subscriptions", distinct=True),
+                price_from=Min("pricing_plans__total_price"),
+            )
             .order_by("-created_at")
         )
 

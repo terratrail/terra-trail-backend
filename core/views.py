@@ -496,12 +496,71 @@ class PlanUsageView(APIView):
 # Workspace Events — recent actionable items for the notification bell
 # ---------------------------------------------------------------------------
 
+class WorkspaceMemberDetailView(APIView):
+    """
+    PATCH  /api/v1/workspaces/members/<pk>/ — Update member role or active status
+    DELETE /api/v1/workspaces/members/<pk>/ — Remove member from workspace
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def _get_membership(self, pk, workspace):
+        try:
+            return WorkspaceMembership.objects.select_related("user").get(pk=pk, workspace=workspace)
+        except WorkspaceMembership.DoesNotExist:
+            return None
+
+    def patch(self, request, pk):
+        from core.permissions import IsWorkspaceAdmin
+        membership = self._get_membership(pk, request.workspace)
+        if not membership:
+            return Response({"detail": "Member not found."}, status=status.HTTP_404_NOT_FOUND)
+        if membership.role == "OWNER":
+            return Response({"detail": "Cannot modify the workspace owner."}, status=status.HTTP_400_BAD_REQUEST)
+
+        role = request.data.get("role")
+        is_active = request.data.get("is_active")
+        if role and role in ["ADMIN", "SALES_REP", "CUSTOMER"]:
+            membership.role = role
+        if is_active is not None:
+            membership.is_active = bool(is_active)
+        membership.save()
+
+        name = membership.user.get_full_name() or membership.user.email
+        WorkspaceActivity.objects.create(
+            workspace=request.workspace,
+            actor=request.user,
+            action_text=f"Updated member {name}",
+            category="settings",
+        )
+        return Response(WorkspaceMembershipSerializer(membership, context={"request": request}).data)
+
+    def delete(self, request, pk):
+        membership = self._get_membership(pk, request.workspace)
+        if not membership:
+            return Response({"detail": "Member not found."}, status=status.HTTP_404_NOT_FOUND)
+        if membership.role == "OWNER":
+            return Response({"detail": "Cannot remove the workspace owner."}, status=status.HTTP_400_BAD_REQUEST)
+        if membership.user == request.user:
+            return Response({"detail": "Cannot remove yourself."}, status=status.HTTP_400_BAD_REQUEST)
+
+        name = membership.user.get_full_name() or membership.user.email
+        membership.delete()
+        WorkspaceActivity.objects.create(
+            workspace=request.workspace,
+            actor=request.user,
+            action_text=f"Removed member {name} from workspace",
+            category="settings",
+        )
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
 class WorkspaceEventsView(APIView):
     """
     GET /api/v1/workspaces/events/
 
-    Returns recent workspace events (pending inspections + new customers)
-    for use in the notification bell. Admin/staff only.
+    Returns recent workspace events for the notification bell.
+    Covers: inspections, customers, payments, subscriptions, commissions.
     """
 
     permission_classes = [IsAuthenticated]
@@ -510,50 +569,79 @@ class WorkspaceEventsView(APIView):
         from datetime import timedelta
         from django.utils import timezone
         from customers.site_inspection_models import SiteInspection
-        from customers.models import Customer
+        from customers.models import Customer, Subscription
+        from payments.models import Payment
+        from commissions.models import Commission
 
+        workspace = request.workspace
+        cutoff = timezone.now() - timedelta(days=7)
         events = []
 
-        # Pending site inspections
-        pending = (
-            SiteInspection.objects.filter(
-                workspace=request.workspace,
-                status="PENDING",
-            )
-            .order_by("-created_at")[:10]
-        )
-        for insp in pending:
+        # ── Pending site inspections ───────────────────────────────────────
+        for insp in SiteInspection.objects.filter(workspace=workspace, status="PENDING").order_by("-created_at")[:8]:
+            prop_name = insp.property_name or (insp.linked_property.name if insp.linked_property else insp.name)
             events.append({
                 "id": f"insp-{insp.id}",
                 "type": "inspection",
                 "title": "Site Inspection Request",
-                "subtitle": insp.property_name or (insp.linked_property.name if insp.linked_property else insp.name),
-                "detail": f"{insp.name} · {insp.inspection_date}",
+                "subtitle": f"{insp.name} — {prop_name}",
                 "created_at": insp.created_at.isoformat(),
                 "href": "/site-inspection",
             })
 
-        # Customers added in last 7 days
-        cutoff = timezone.now() - timedelta(days=7)
-        new_customers = (
-            Customer.objects.filter(
-                workspace=request.workspace,
-                created_at__gte=cutoff,
-            )
-            .order_by("-created_at")[:10]
-        )
-        for cust in new_customers:
+        # ── New customers (last 7 days) ────────────────────────────────────
+        for cust in Customer.objects.filter(workspace=workspace, created_at__gte=cutoff).order_by("-created_at")[:8]:
             events.append({
                 "id": f"cust-{cust.id}",
                 "type": "customer",
-                "title": "New Customer",
-                "subtitle": f"{cust.first_name} {cust.last_name}".strip() or cust.email,
-                "detail": cust.email,
+                "title": "New Customer Added",
+                "subtitle": cust.full_name or cust.email,
                 "created_at": cust.created_at.isoformat(),
+                "href": f"/customers/{cust.id}",
+            })
+
+        # ── Pending payments (awaiting approval) ──────────────────────────
+        for pay in Payment.objects.filter(workspace=workspace, status=Payment.Status.PENDING).order_by("-created_at")[:8]:
+            customer_name = ""
+            try:
+                customer_name = pay.installment.subscription.customer.full_name
+            except Exception:
+                pass
+            events.append({
+                "id": f"pay-{pay.id}",
+                "type": "payment",
+                "title": "Payment Awaiting Approval",
+                "subtitle": f"₦{pay.amount:,.0f}" + (f" — {customer_name}" if customer_name else ""),
+                "created_at": pay.created_at.isoformat(),
                 "href": "/customers",
             })
 
-        # Sort by created_at descending
-        events.sort(key=lambda e: e["created_at"], reverse=True)
+        # ── New subscriptions (last 7 days) ───────────────────────────────
+        for sub in Subscription.objects.filter(workspace=workspace, created_at__gte=cutoff).order_by("-created_at")[:5]:
+            try:
+                prop_name = sub.property.name
+                cust_name = sub.customer.full_name
+            except Exception:
+                prop_name = cust_name = ""
+            events.append({
+                "id": f"sub-{sub.id}",
+                "type": "subscription",
+                "title": "New Subscription",
+                "subtitle": f"{cust_name} — {prop_name}".strip(" —"),
+                "created_at": sub.created_at.isoformat(),
+                "href": f"/customers/{sub.customer_id}" if sub.customer_id else "/customers",
+            })
 
-        return Response({"events": events[:20], "count": len(events)})
+        # ── Pending commissions (last 7 days) ─────────────────────────────
+        for comm in Commission.objects.filter(workspace=workspace, status=Commission.Status.PENDING, created_at__gte=cutoff).order_by("-created_at")[:5]:
+            events.append({
+                "id": f"comm-{comm.id}",
+                "type": "commission",
+                "title": "Commission Pending",
+                "subtitle": f"₦{comm.amount:,.0f} — {comm.sales_rep.name if comm.sales_rep else ''}",
+                "created_at": comm.created_at.isoformat(),
+                "href": "/sales-reps",
+            })
+
+        events.sort(key=lambda e: e["created_at"], reverse=True)
+        return Response({"events": events[:25], "count": len(events)})

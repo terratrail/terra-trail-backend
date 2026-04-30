@@ -8,6 +8,7 @@ from core.views import (
     WorkspaceSettingsView, WorkspaceActivityListView, WorkspaceMembersListView,
     InviteMemberView, InviteDetailView, AcceptInviteView, MyMembershipView,
     PlanListView, SelectPlanView, PlanUsageView, WorkspaceEventsView,
+    WorkspaceMemberDetailView,
 )
 
 app_name = "core"
@@ -20,6 +21,7 @@ urlpatterns = [
     path("settings/", WorkspaceSettingsView.as_view(), name="workspace-settings"),
     path("activity/", WorkspaceActivityListView.as_view(), name="workspace-activity"),
     path("members/", WorkspaceMembersListView.as_view(), name="workspace-members"),
+    path("members/<str:pk>/", WorkspaceMemberDetailView.as_view(), name="workspace-member-detail"),
     path("my-membership/", MyMembershipView.as_view(), name="workspace-my-membership"),
     path("invites/", InviteMemberView.as_view(), name="workspace-invites"),
     path("invites/<str:token>/", InviteDetailView.as_view(), name="workspace-invite-detail"),
