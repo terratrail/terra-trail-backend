@@ -36,15 +36,21 @@ class PaymentListView(generics.ListAPIView):
     filterset_fields = ["status"]
 
     def get_queryset(self):
-        return (
+        qs = (
             Payment.objects.filter(workspace=self.request.workspace)
             .select_related(
                 "installment__subscription__customer",
+                "installment__subscription__property",
+                "installment__subscription__pricing_plan",
                 "recorded_by",
                 "approved_by",
             )
             .order_by("-created_at")
         )
+        property_id = self.request.query_params.get("property")
+        if property_id:
+            qs = qs.filter(installment__subscription__property=property_id)
+        return qs
 
 
 @method_decorator(name="retrieve", decorator=swagger_auto_schema(tags=_PAY_TAG))

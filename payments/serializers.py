@@ -17,20 +17,39 @@ class PaymentSerializer(serializers.ModelSerializer):
     approved_by_email = serializers.CharField(
         source="approved_by.email", read_only=True, default=None
     )
+    recorded_by_name = serializers.SerializerMethodField()
     customer_name = serializers.CharField(
         source="installment.subscription.customer.full_name",
         read_only=True,
+    )
+    land_size = serializers.CharField(
+        source="installment.subscription.pricing_plan.land_size",
+        read_only=True, default=None,
+    )
+    property_id = serializers.UUIDField(
+        source="installment.subscription.property.id",
+        read_only=True, default=None,
+    )
+    property_name = serializers.CharField(
+        source="installment.subscription.property.name",
+        read_only=True, default=None,
     )
     installment_number = serializers.IntegerField(
         source="installment.installment_number", read_only=True,
     )
 
+    def get_recorded_by_name(self, obj):
+        if obj.recorded_by:
+            return f"{obj.recorded_by.first_name} {obj.recorded_by.last_name}".strip() or obj.recorded_by.email
+        return None
+
     class Meta:
         model = Payment
         fields = [
             "id", "installment", "installment_number",
-            "customer_name", "amount", "payment_date",
-            "status", "recorded_by", "recorded_by_email",
+            "customer_name", "land_size", "property_id", "property_name",
+            "amount", "payment_date",
+            "status", "recorded_by", "recorded_by_email", "recorded_by_name",
             "approved_by", "approved_by_email",
             "receipt_url", "receipt_file",
             "transaction_reference", "notes",

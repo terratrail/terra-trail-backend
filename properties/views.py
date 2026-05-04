@@ -600,3 +600,32 @@ class PublicPropertyAppreciationView(APIView):
             return Response({"detail": "Property not found."}, status=status.HTTP_404_NOT_FOUND)
         qs = PropertyAppreciation.objects.filter(workspace=workspace, property_id=id)
         return Response(PropertyAppreciationSerializer(qs, many=True, context={"request": request}).data)
+
+
+class PublicValidateReferralView(APIView):
+    """
+    GET /api/v1/public/<workspace_slug>/validate-referral/?code=<code>
+    Public — no auth required. Validates a sales rep referral code.
+    Returns { valid, rep_name } on success.
+    """
+
+    permission_classes = []
+
+    def get(self, request, workspace_slug):
+        from core.models import Workspace
+        from commissions.models import SalesRep
+
+        code = request.query_params.get("code", "").strip()
+        if not code:
+            return Response({"valid": False, "rep_name": None})
+
+        try:
+            workspace = Workspace.objects.get(slug=workspace_slug, is_active=True)
+        except Workspace.DoesNotExist:
+            return Response({"valid": False, "rep_name": None})
+
+        try:
+            rep = SalesRep.objects.get(workspace=workspace, referral_code__iexact=code, is_active=True)
+            return Response({"valid": True, "rep_name": rep.name})
+        except SalesRep.DoesNotExist:
+            return Response({"valid": False, "rep_name": None})

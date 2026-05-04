@@ -139,15 +139,62 @@ class SubscriptionListSerializer(serializers.ModelSerializer):
     """Compact subscription representation for listings."""
 
     customer_name = serializers.CharField(source="customer.full_name", read_only=True)
+    customer_email = serializers.CharField(source="customer.email", read_only=True)
+    customer_phone = serializers.CharField(source="customer.phone", read_only=True)
     property_name = serializers.CharField(source="property.name", read_only=True)
+    land_size = serializers.CharField(source="pricing_plan.land_size", read_only=True, default=None)
+    plan_name = serializers.CharField(source="pricing_plan.plan_name", read_only=True, default=None)
+    payment_type = serializers.CharField(source="pricing_plan.payment_type", read_only=True, default=None)
+    monthly_installment = serializers.DecimalField(
+        source="pricing_plan.monthly_installment", max_digits=14, decimal_places=2, read_only=True, default=None
+    )
+    next_due_date = serializers.SerializerMethodField()
+    next_due_amount = serializers.SerializerMethodField()
+    next_due_installment_id = serializers.SerializerMethodField()
+    payment_completion_pct = serializers.SerializerMethodField()
+    assigned_rep_name = serializers.SerializerMethodField()
+
+    def get_assigned_rep_name(self, obj):
+        if not obj.assigned_rep:
+            return None
+        return obj.assigned_rep.get_full_name() or obj.assigned_rep.email
+
+    def _next_installment(self, obj):
+        return (
+            obj.installments
+            .filter(status__in=["UPCOMING", "DUE", "OVERDUE"])
+            .order_by("due_date")
+            .first()
+        )
+
+    def get_next_due_date(self, obj):
+        inst = self._next_installment(obj)
+        return str(inst.due_date) if inst else None
+
+    def get_next_due_amount(self, obj):
+        inst = self._next_installment(obj)
+        return str(inst.amount) if inst else None
+
+    def get_next_due_installment_id(self, obj):
+        inst = self._next_installment(obj)
+        return str(inst.id) if inst else None
+
+    def get_payment_completion_pct(self, obj):
+        total = float(obj.total_price or 0)
+        if total == 0:
+            return 0
+        return round(float(obj.amount_paid) / total * 100, 1)
 
     class Meta:
         model = Subscription
         fields = [
-            "id", "customer", "customer_name",
+            "id", "customer", "customer_name", "customer_email", "customer_phone",
             "property", "property_name",
-            "total_price", "amount_paid", "balance",
+            "land_size", "plan_name", "payment_type", "monthly_installment",
+            "total_price", "amount_paid", "balance", "payment_completion_pct",
             "status", "start_date", "estimated_end_date",
+            "next_due_date", "next_due_amount", "next_due_installment_id",
+            "assigned_rep", "assigned_rep_name",
             "created_at",
         ]
         read_only_fields = fields

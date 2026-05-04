@@ -66,6 +66,20 @@ class SiteInspection(WorkspaceScopedModel):
         default=Status.PENDING,
     )
     notes = models.TextField(blank=True, default="")
+    assigned_rep = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="managed_inspections",
+    )
+    converted_customer = models.ForeignKey(
+        "customers.Customer",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="source_inspections",
+    )
 
     class Meta:
         verbose_name = "Site Inspection"

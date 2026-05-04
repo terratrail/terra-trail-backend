@@ -31,10 +31,15 @@ class SiteInspectionListCreateView(generics.ListCreateAPIView):
         return SiteInspectionSerializer
 
     def get_queryset(self):
-        qs = SiteInspection.objects.filter(workspace=self.request.workspace)
+        qs = SiteInspection.objects.filter(
+            workspace=self.request.workspace
+        ).select_related("linked_property", "assigned_rep", "converted_customer")
         status_filter = self.request.query_params.get("status")
         if status_filter:
             qs = qs.filter(status=status_filter.upper())
+        property_id = self.request.query_params.get("property")
+        if property_id:
+            qs = qs.filter(linked_property=property_id)
         return qs
 
     @swagger_auto_schema(tags=_TAG)

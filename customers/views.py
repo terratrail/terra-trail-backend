@@ -148,12 +148,12 @@ class SubscriptionListView(generics.ListAPIView):
 
     serializer_class = SubscriptionListSerializer
     permission_classes = [IsAuthenticated, IsWorkspaceAdminOrReadOnly]
-    filterset_fields = ["status", "customer"]
+    filterset_fields = ["status", "customer", "property", "assigned_rep"]
 
     def get_queryset(self):
         return (
             Subscription.objects.filter(workspace=self.request.workspace)
-            .select_related("customer", "property", "pricing_plan")
+            .select_related("customer", "property", "pricing_plan", "assigned_rep")
             .order_by("-created_at")
         )
 

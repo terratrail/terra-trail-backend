@@ -9,6 +9,7 @@ from properties.views import (
     PublicPropertyDetailView,
     PublicInspectionConfigView,
     PublicPropertyAppreciationView,
+    PublicValidateReferralView,
 )
 
 urlpatterns = [
@@ -16,4 +17,5 @@ urlpatterns = [
     path("<slug:workspace_slug>/properties/<uuid:id>/", PublicPropertyDetailView.as_view(), name="public-property-detail"),
     path("<slug:workspace_slug>/properties/<uuid:id>/inspection-config/", PublicInspectionConfigView.as_view(), name="public-inspection-config"),
     path("<slug:workspace_slug>/properties/<uuid:id>/appreciations/", PublicPropertyAppreciationView.as_view(), name="public-appreciation-list"),
+    path("<slug:workspace_slug>/validate-referral/", PublicValidateReferralView.as_view(), name="public-validate-referral"),
 ]
