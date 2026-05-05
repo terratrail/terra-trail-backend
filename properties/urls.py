@@ -10,6 +10,7 @@ from properties.views import (
     PricingPlanActivateView,
     PricingPlanDeactivateView,
     PricingPlanDetailView,
+    PricingPlanHistoryView,
     PricingPlanListCreateView,
     PropertyAmenityDetailView,
     PropertyAmenityListCreateView,
@@ -39,6 +40,7 @@ urlpatterns = [
     path("plans/<uuid:id>/", PricingPlanDetailView.as_view(), name="plan-detail"),
     path("plans/<uuid:id>/activate/",   PricingPlanActivateView.as_view(),   name="plan-activate"),
     path("plans/<uuid:id>/deactivate/", PricingPlanDeactivateView.as_view(), name="plan-deactivate"),
+    path("plans/<uuid:id>/history/",    PricingPlanHistoryView.as_view(),    name="plan-history"),
 
     # Bank Accounts  (?property_id=<uuid> to filter)
     path("bank-accounts/", BankAccountListCreateView.as_view(), name="bank-list-create"),

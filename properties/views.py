@@ -14,12 +14,13 @@ from drf_yasg import openapi
 from core.permissions import IsWorkspaceAdmin, IsWorkspaceAdminOrReadOnly
 from core.plan_guard import PlanGuard, PlanLimitExceeded
 from properties.models import (
-    BankAccount, PricingPlan, Property,
+    BankAccount, PricingPlan, PricingPlanHistory, Property,
     PropertyAmenity, PropertyDocument, PropertyGallery,
 )
 from properties.serializers import (
     BankAccountSerializer,
     PricingPlanCreateSerializer,
+    PricingPlanHistorySerializer,
     PricingPlanSerializer,
     PropertyAmenitySerializer,
     PropertyCreateSerializer,
@@ -600,6 +601,24 @@ class PublicPropertyAppreciationView(APIView):
             return Response({"detail": "Property not found."}, status=status.HTTP_404_NOT_FOUND)
         qs = PropertyAppreciation.objects.filter(workspace=workspace, property_id=id)
         return Response(PropertyAppreciationSerializer(qs, many=True, context={"request": request}).data)
+
+
+class PricingPlanHistoryView(generics.ListAPIView):
+    """
+    GET /api/v1/properties/plans/<id>/history/
+
+    List price change history for a pricing plan.
+    """
+
+    serializer_class = PricingPlanHistorySerializer
+    permission_classes = [IsAuthenticated, IsWorkspaceAdminOrReadOnly]
+
+    def get_queryset(self):
+        plan_id = self.kwargs.get("id")
+        return PricingPlanHistory.objects.filter(
+            workspace=self.request.workspace,
+            pricing_plan_id=plan_id,
+        ).select_related("changed_by").order_by("-created_at")
 
 
 class PublicValidateReferralView(APIView):

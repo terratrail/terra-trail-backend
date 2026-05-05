@@ -322,6 +322,11 @@ PAYSTACK_SECRET_KEY = config("PAYSTACK_SECRET_KEY", default="")
 PAYSTACK_PUBLIC_KEY = config("PAYSTACK_PUBLIC_KEY", default="")
 
 
+FRONTEND_BASE_URL = config(
+    "FRONTEND_BASE_URL", default="https://terra-trail.vercel.app"
+)
+
+
 # ---------------------------------------------------------------------------
 # Default primary key field type
 # ---------------------------------------------------------------------------

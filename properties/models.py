@@ -478,3 +478,50 @@ class PropertyAppreciation(WorkspaceScopedModel):
 
     def __str__(self):
         return f"{self.property.name}: {self.old_price} → {self.new_price} on {self.effective_date}"
+
+
+class PricingPlanHistory(WorkspaceScopedModel):
+    """Audit log of price changes on a PricingPlan."""
+
+    pricing_plan = models.ForeignKey(
+        PricingPlan,
+        on_delete=models.CASCADE,
+        related_name="price_history",
+    )
+    old_price = models.DecimalField(max_digits=14, decimal_places=2)
+    new_price = models.DecimalField(max_digits=14, decimal_places=2)
+    changed_by = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
+    notes = models.TextField(blank=True, default="")
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.pricing_plan.plan_name}: ₦{self.old_price} → ₦{self.new_price}"
+
+
+from django.db.models.signals import pre_save  # noqa: E402
+from django.dispatch import receiver  # noqa: E402
+
+
+@receiver(pre_save, sender=PricingPlan)
+def log_price_change(sender, instance, **kwargs):
+    """Log a PricingPlanHistory entry whenever total_price changes."""
+    if not instance.pk:
+        return
+    try:
+        old = sender.objects.get(pk=instance.pk)
+        if old.total_price != instance.total_price:
+            PricingPlanHistory.objects.create(
+                workspace=instance.workspace,
+                pricing_plan=instance,
+                old_price=old.total_price,
+                new_price=instance.total_price,
+            )
+    except sender.DoesNotExist:
+        pass

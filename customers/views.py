@@ -4,6 +4,7 @@ Customers views — CRUD for customers and subscriptions.
 
 from django.utils.decorators import method_decorator
 from rest_framework import generics, status
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -159,8 +160,9 @@ class SubscriptionListView(generics.ListAPIView):
 
 
 @method_decorator(name="retrieve", decorator=swagger_auto_schema(tags=_CUST_TAG))
-class SubscriptionDetailView(generics.RetrieveAPIView):
-    """GET /api/v1/customers/subscriptions/<id>/"""
+@method_decorator(name="destroy",  decorator=swagger_auto_schema(tags=_CUST_TAG))
+class SubscriptionDetailView(generics.RetrieveDestroyAPIView):
+    """GET/DELETE /api/v1/customers/subscriptions/<id>/"""
 
     serializer_class = SubscriptionSerializer
     permission_classes = [IsAuthenticated, IsWorkspaceAdminOrReadOnly]
@@ -172,6 +174,18 @@ class SubscriptionDetailView(generics.RetrieveAPIView):
             .select_related("customer", "property", "pricing_plan")
             .prefetch_related("installments")
         )
+
+    def perform_destroy(self, instance):
+        deletable = [
+            Subscription.Status.PENDING,
+            Subscription.Status.ACTIVE,
+            Subscription.Status.DEFAULTED,
+            Subscription.Status.DEFAULTING,
+        ]
+        if instance.status not in deletable:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Only pending, active, or defaulting subscriptions can be deleted.")
+        instance.delete()
 
 
 class SubscriptionCreateView(APIView):
@@ -269,3 +283,94 @@ class InstallmentListView(generics.ListAPIView):
             .select_related("subscription")
             .order_by("due_date")
         )
+
+
+class AllocateSubscriptionView(APIView):
+    """
+    POST /api/v1/customers/subscriptions/<id>/allocate/
+
+    Assign a plot number to a completed subscription.
+    """
+
+    permission_classes = [IsAuthenticated, IsWorkspaceAdmin]
+
+    @swagger_auto_schema(tags=["Subscriptions"])
+    def post(self, request, id):
+        try:
+            subscription = Subscription.objects.get(id=id, workspace=request.workspace)
+        except Subscription.DoesNotExist:
+            return Response({"message": "Subscription not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        if subscription.status != Subscription.Status.COMPLETED:
+            return Response(
+                {"message": "Plot can only be allocated to completed subscriptions."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        plot_number = request.data.get("plot_number", "").strip()
+        allocation_date = request.data.get("allocation_date")
+        allocation_notes = request.data.get("allocation_notes", "")
+        allocation_letter = request.FILES.get("allocation_letter")
+
+        if not plot_number:
+            return Response({"message": "Plot number is required."}, status=status.HTTP_400_BAD_REQUEST)
+        if not allocation_date:
+            return Response({"message": "Allocation date is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Duplicate plot check within the same property
+        duplicate = Subscription.objects.filter(
+            workspace=request.workspace,
+            property=subscription.property,
+            plot_number=plot_number,
+        ).exclude(id=subscription.id).first()
+        if duplicate:
+            return Response(
+                {"message": f"Plot '{plot_number}' is already allocated to another customer in this property."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        subscription.plot_number = plot_number
+        subscription.allocation_date = allocation_date
+        subscription.allocation_notes = allocation_notes
+        if allocation_letter:
+            subscription.allocation_letter = allocation_letter
+        subscription.save(update_fields=["plot_number", "allocation_date", "allocation_notes", "allocation_letter", "updated_at"])
+
+        return Response(SubscriptionListSerializer(subscription).data)
+
+
+class CancelSubscriptionView(APIView):
+    """
+    POST /api/v1/customers/subscriptions/<id>/cancel/
+
+    Cancel a subscription. Only PENDING/ACTIVE/DEFAULTING/DEFAULTED.
+    """
+
+    permission_classes = [IsAuthenticated, IsWorkspaceAdmin]
+
+    @swagger_auto_schema(tags=["Subscriptions"])
+    def post(self, request, id):
+        try:
+            subscription = Subscription.objects.get(id=id, workspace=request.workspace)
+        except Subscription.DoesNotExist:
+            return Response({"message": "Subscription not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        cancellable = [
+            Subscription.Status.PENDING,
+            Subscription.Status.ACTIVE,
+            Subscription.Status.DEFAULTED,
+            Subscription.Status.DEFAULTING,
+        ]
+        if subscription.status not in cancellable:
+            return Response(
+                {"message": "Only pending, active, or defaulting subscriptions can be cancelled."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        reason = request.data.get("reason", "").strip()
+        subscription.status = Subscription.Status.CANCELLED
+        if reason:
+            subscription.notes = f"{subscription.notes}\nCancellation reason: {reason}".strip()
+        subscription.save(update_fields=["status", "notes", "updated_at"])
+
+        return Response(SubscriptionListSerializer(subscription).data)

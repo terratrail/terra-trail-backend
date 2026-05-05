@@ -10,6 +10,7 @@ from properties.models import (
     InspectionConfig,
     LandSize,
     PricingPlan,
+    PricingPlanHistory,
     Property,
     PropertyAmenity,
     PropertyAppreciation,
@@ -22,6 +23,23 @@ from properties.models import (
 # ---------------------------------------------------------------------------
 # Simple / standalone serializers
 # ---------------------------------------------------------------------------
+
+
+class PricingPlanHistorySerializer(serializers.ModelSerializer):
+    changed_by_name = serializers.SerializerMethodField()
+
+    def get_changed_by_name(self, obj):
+        if not obj.changed_by:
+            return None
+        return obj.changed_by.get_full_name() or obj.changed_by.email
+
+    class Meta:
+        model = PricingPlanHistory
+        fields = [
+            "id", "pricing_plan", "old_price", "new_price",
+            "changed_by", "changed_by_name", "notes", "created_at",
+        ]
+        read_only_fields = fields
 
 
 class PropertyLocationSerializer(serializers.ModelSerializer):

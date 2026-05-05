@@ -4,6 +4,8 @@ Customers URL configuration.
 
 from django.urls import path
 from customers.views import (
+    AllocateSubscriptionView,
+    CancelSubscriptionView,
     CustomerDetailView,
     CustomerListCreateView,
     InstallmentListView,
@@ -27,6 +29,8 @@ urlpatterns = [
     path("subscriptions/", SubscriptionListView.as_view(), name="subscription-list"),
     path("subscriptions/create/", SubscriptionCreateView.as_view(), name="subscription-create"),
     path("subscriptions/<uuid:id>/", SubscriptionDetailView.as_view(), name="subscription-detail"),
+    path("subscriptions/<uuid:id>/allocate/", AllocateSubscriptionView.as_view(), name="subscription-allocate"),
+    path("subscriptions/<uuid:id>/cancel/", CancelSubscriptionView.as_view(), name="subscription-cancel"),
 
     # Installments
     path("installments/", InstallmentListView.as_view(), name="installment-list"),

@@ -14,6 +14,9 @@ class CustomerListSerializer(serializers.ModelSerializer):
     active_subscriptions = serializers.SerializerMethodField()
     completed_subscriptions = serializers.SerializerMethodField()
     defaulting_subscriptions = serializers.SerializerMethodField()
+    total_subscriptions = serializers.SerializerMethodField()
+    total_paid = serializers.SerializerMethodField()
+    total_balance = serializers.SerializerMethodField()
 
     class Meta:
         model = Customer
@@ -22,6 +25,7 @@ class CustomerListSerializer(serializers.ModelSerializer):
             "referral_source", "referral_code",
             "primary_subscription",
             "active_subscriptions", "completed_subscriptions", "defaulting_subscriptions",
+            "total_subscriptions", "total_paid", "total_balance",
             "created_at",
         ]
         read_only_fields = fields
@@ -64,6 +68,17 @@ class CustomerListSerializer(serializers.ModelSerializer):
 
     def get_defaulting_subscriptions(self, obj):
         return sum(1 for s in self._subs(obj) if s.status == "DEFAULTING")
+
+    def get_total_subscriptions(self, obj):
+        return len(self._subs(obj))
+
+    def get_total_paid(self, obj):
+        from decimal import Decimal
+        return str(sum(s.amount_paid or Decimal(0) for s in self._subs(obj)))
+
+    def get_total_balance(self, obj):
+        from decimal import Decimal
+        return str(sum(s.balance or Decimal(0) for s in self._subs(obj)))
 
 
 class CustomerSerializer(serializers.ModelSerializer):
@@ -195,6 +210,7 @@ class SubscriptionListSerializer(serializers.ModelSerializer):
             "status", "start_date", "estimated_end_date",
             "next_due_date", "next_due_amount", "next_due_installment_id",
             "assigned_rep", "assigned_rep_name",
+            "plot_number", "allocation_date", "allocation_letter", "allocation_notes",
             "created_at",
         ]
         read_only_fields = fields

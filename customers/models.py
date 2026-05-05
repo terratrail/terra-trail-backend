@@ -83,6 +83,7 @@ class Subscription(WorkspaceScopedModel):
         COMPLETED = "COMPLETED", "Completed"
         CANCELLED = "CANCELLED", "Cancelled"
         DEFAULTED = "DEFAULTED", "Defaulted"
+        DEFAULTING = "DEFAULTING", "Defaulting"
 
     customer = models.ForeignKey(
         Customer,
@@ -124,6 +125,14 @@ class Subscription(WorkspaceScopedModel):
         blank=True,
         related_name="managed_subscriptions",
     )
+
+    # ── Plot Allocation ──────────────────────────────────────────────────────
+    plot_number = models.CharField(max_length=100, blank=True, default="")
+    allocation_date = models.DateField(null=True, blank=True)
+    allocation_letter = models.FileField(
+        upload_to="allocation_letters/", null=True, blank=True
+    )
+    allocation_notes = models.TextField(blank=True, default="")
 
     class Meta:
         indexes = [

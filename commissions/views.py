@@ -94,11 +94,15 @@ class CommissionListView(generics.ListAPIView):
     filterset_fields = ["status", "sales_rep"]
 
     def get_queryset(self):
-        return (
+        qs = (
             Commission.objects.filter(workspace=self.request.workspace)
             .select_related("sales_rep", "payment")
             .order_by("-created_at")
         )
+        property_id = self.request.query_params.get("property")
+        if property_id:
+            qs = qs.filter(payment__installment__subscription__property=property_id)
+        return qs
 
 
 class CommissionMarkPaidView(APIView):
