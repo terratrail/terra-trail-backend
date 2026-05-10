@@ -54,8 +54,12 @@ class Workspace(TimeStampedModel):
     support_whatsapp = models.CharField(max_length=20, blank=True, default="")
 
     # Social Links
-    website_url = models.URLField(max_length=500, blank=True, default="")
+    website_url   = models.URLField(max_length=500, blank=True, default="")
     instagram_url = models.URLField(max_length=500, blank=True, default="")
+    facebook_url  = models.URLField(max_length=500, blank=True, default="")
+    twitter_url   = models.URLField(max_length=500, blank=True, default="")
+    linkedin_url  = models.URLField(max_length=500, blank=True, default="")
+    youtube_url   = models.URLField(max_length=500, blank=True, default="")
 
     # Billing
     billing_plan = models.CharField(
@@ -129,10 +133,30 @@ class WorkspaceSettings(WorkspaceScopedModel):
     )
     can_reps_manage_sales_reps = models.BooleanField(default=False)
     
-    # Notification Toggles
+    # Notification Toggles — Bookings
     notify_customer_on_booking_status = models.BooleanField(default=True)
+    notify_booking_rejected = models.BooleanField(default=True)
     notify_admin_on_new_booking = models.BooleanField(default=True)
+
+    # Notification Toggles — Payments & Subscriptions
     notify_customer_on_payment_receipt = models.BooleanField(default=True)
+    notify_payment_approved = models.BooleanField(default=True)
+    notify_payment_rejected = models.BooleanField(default=True)
+    notify_payment_reminder_7d = models.BooleanField(default=True)
+    notify_payment_reminder_2d = models.BooleanField(default=True)
+    notify_payment_due_today = models.BooleanField(default=True)
+    notify_payment_overdue = models.BooleanField(default=True)
+    notify_subscription_completed = models.BooleanField(default=True)
+
+    # Notification Toggles — Properties
+    notify_property_published = models.BooleanField(default=True)
+
+    # Notification Toggles — Realtors
+    notify_realtor_added = models.BooleanField(default=True)
+    notify_commission_paid = models.BooleanField(default=True)
+
+    # Notification Toggles — Plot Allocation
+    notify_plot_allocated = models.BooleanField(default=True)
 
     # Default commission rates per sales rep tier (can be overridden per property)
     commission_starter_pct = models.DecimalField(

@@ -15,7 +15,9 @@ class WorkspaceSerializer(serializers.ModelSerializer):
             "id", "name", "slug", "logo", "timezone", "region",
             "initial_payment_as_first_month", "create_estate_public_pages",
             "intercom_app_id", "support_email", "support_whatsapp",
-            "website_url", "instagram_url", "billing_plan", "plan_expires_at",
+            "website_url", "instagram_url", "facebook_url", "twitter_url",
+            "linkedin_url", "youtube_url",
+            "billing_plan", "plan_expires_at",
             "is_active", "created_at", "updated_at",
         ]
         read_only_fields = ["id", "slug", "billing_plan", "plan_expires_at", "created_at", "updated_at"]
@@ -27,9 +29,20 @@ class WorkspaceSettingsSerializer(serializers.ModelSerializer):
     class Meta:
         model = WorkspaceSettings
         fields = [
+            # Permissions
             "can_reps_approve_bookings", "can_reps_manage_subscriptions",
-            "can_reps_manage_sales_reps", "notify_customer_on_booking_status",
-            "notify_admin_on_new_booking", "notify_customer_on_payment_receipt",
+            "can_reps_manage_sales_reps",
+            # Notification toggles
+            "notify_customer_on_booking_status", "notify_booking_rejected",
+            "notify_admin_on_new_booking",
+            "notify_customer_on_payment_receipt", "notify_payment_approved",
+            "notify_payment_rejected", "notify_payment_reminder_7d",
+            "notify_payment_reminder_2d", "notify_payment_due_today",
+            "notify_payment_overdue", "notify_subscription_completed",
+            "notify_property_published",
+            "notify_realtor_added", "notify_commission_paid",
+            "notify_plot_allocated",
+            # Commission defaults
             "commission_starter_pct", "commission_senior_pct", "commission_legend_pct",
         ]
 
