@@ -1,0 +1,61 @@
+{% extends "core/email/base_email.html" %}
+{% block subject %}Property Subscription Confirmed — {{ property_name }}{% endblock %}
+
+{% block body %}
+  <div style="text-align:center; margin-bottom:24px;">
+    <span class="badge-success">&#10003; Subscription Confirmed</span>
+  </div>
+
+  <p class="email-title">Congratulations, {{ customer_name }}!</p>
+  <p class="email-text">
+    Your subscription to <strong>{{ property_name }}</strong> has been confirmed.
+    Welcome to your property journey with <strong>{{ workspace_name }}</strong> — we're excited to have you on board!
+  </p>
+
+  <div class="highlight-box">
+    <div class="amount">₦{{ total_price }}</div>
+    <div class="label">{{ plan_name }} — {{ payment_type }} Plan</div>
+  </div>
+
+  <table class="info-table">
+    <tr>
+      <td>Property</td>
+      <td>{{ property_name }}</td>
+    </tr>
+    {% if property_location %}
+    <tr>
+      <td>Location</td>
+      <td>{{ property_location }}</td>
+    </tr>
+    {% endif %}
+    <tr>
+      <td>Pricing Plan</td>
+      <td>{{ plan_name }}</td>
+    </tr>
+    <tr>
+      <td>Total Price</td>
+      <td>₦{{ total_price }}</td>
+    </tr>
+    <tr>
+      <td>Payment Type</td>
+      <td>{{ payment_type }}</td>
+    </tr>
+  </table>
+
+  <div class="alert-box">
+    <strong>Important:</strong> Please keep this email as a record of your subscription.
+    Your account manager will contact you shortly with payment details and next steps.
+  </div>
+
+  <hr class="divider">
+
+  <p class="email-text" style="font-size:13px;">
+    Thank you for your trust in <strong>{{ workspace_name }}</strong>.
+    If you have any questions, please reach out to us at
+    <a href="mailto:{{ support_email }}" style="color:#059669;">{{ support_email }}</a>.
+  </p>
+
+  <p class="email-text" style="font-size:13px; margin-top:0;">
+    — The <strong>{{ workspace_name }}</strong> Team
+  </p>
+{% endblock %}

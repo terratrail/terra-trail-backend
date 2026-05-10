@@ -25,9 +25,9 @@ class Settings:
     # Company Identity
     # -------------------------------------------------------------------------
     COMPANY_NAME: str = env("COMPANY_NAME", default="TerraTrail Technologies Ltd")
-    SUPPORT_EMAIL: str = env("SUPPORT_EMAIL", default="support@terratrail.io")
-    SALES_EMAIL: str = env("SALES_EMAIL", default="sales@terratrail.io")
-    BILLING_EMAIL: str = env("BILLING_EMAIL", default="billing@terratrail.io")
+    SUPPORT_EMAIL: str = env("SUPPORT_EMAIL", default="support@terratrail.app")
+    SALES_EMAIL: str = env("SALES_EMAIL", default="sales@terratrail.app")
+    BILLING_EMAIL: str = env("BILLING_EMAIL", default="billing@terratrail.app")
 
     # -------------------------------------------------------------------------
     # URLs

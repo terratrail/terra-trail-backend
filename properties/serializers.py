@@ -217,9 +217,12 @@ class _DocumentNestedSerializer(serializers.ModelSerializer):
 
 
 class _PricingPlanNestedSerializer(serializers.ModelSerializer):
+    id = serializers.UUIDField(required=False)
+
     class Meta:
         model = PricingPlan
         fields = [
+            "id",
             "plan_name",
             "land_size",
             "total_price",
@@ -360,8 +363,10 @@ class PublicPropertySerializer(serializers.ModelSerializer):
 
     location = PropertyLocationSerializer(read_only=True)
     pricing_plans = PricingPlanSerializer(many=True, read_only=True)
+    bank_accounts = BankAccountSerializer(many=True, read_only=True)
     gallery_images = PropertyGallerySerializer(many=True, read_only=True)
     amenities = PropertyAmenitySerializer(many=True, read_only=True)
+    documents = PropertyDocumentSerializer(many=True, read_only=True)
     land_sizes = LandSizeSerializer(many=True, read_only=True)
 
     class Meta:
@@ -370,8 +375,8 @@ class PublicPropertySerializer(serializers.ModelSerializer):
             "id", "name", "property_type", "description",
             "total_sqms", "available_units", "unit_measurement",
             "status", "featured_image", "location",
-            "gallery_images", "land_sizes", "pricing_plans", "amenities",
-            "created_at",
+            "gallery_images", "land_sizes", "pricing_plans", "bank_accounts",
+            "amenities", "documents", "created_at",
         ]
         read_only_fields = fields
 
@@ -541,11 +546,27 @@ class PropertyCreateSerializer(serializers.ModelSerializer):
                 )
 
         if pricing_plans_data is not None:
-            instance.pricing_plans.filter(is_locked=False).delete()
+            existing = {
+                str(p.id): p
+                for p in instance.pricing_plans.filter(is_locked=False)
+            }
+            seen_ids = set()
             for item in pricing_plans_data:
-                PricingPlan.objects.create(
-                    workspace=workspace, property=instance, **item
-                )
+                plan_id = str(item.pop("id", "") or "")
+                if plan_id and plan_id in existing:
+                    plan = existing[plan_id]
+                    for k, v in item.items():
+                        setattr(plan, k, v)
+                    plan.save()
+                    seen_ids.add(plan_id)
+                else:
+                    new_plan = PricingPlan.objects.create(
+                        workspace=workspace, property=instance, **item
+                    )
+                    seen_ids.add(str(new_plan.id))
+            for plan_id, plan in existing.items():
+                if plan_id not in seen_ids:
+                    plan.delete()
 
         if bank_accounts_data is not None:
             instance.bank_accounts.all().delete()
@@ -566,7 +587,9 @@ class InspectionConfigSerializer(serializers.ModelSerializer):
         model = InspectionConfig
         fields = [
             "id", "property", "meeting_point", "virtual_link",
-            "available_days", "time_from", "time_to", "max_persons", "notes",
+            "available_days", "time_from", "time_to",
+            "time_slots", "is_active",
+            "max_persons", "notes",
             "created_at", "updated_at",
         ]
         read_only_fields = ["id", "created_at", "updated_at"]

@@ -390,7 +390,16 @@ class PropertyGalleryListCreateView(generics.ListCreateAPIView):
         return qs.select_related("property").order_by("order", "created_at")
 
     def perform_create(self, serializer):
-        serializer.save(workspace=self.request.workspace)
+        property_id = self.request.data.get("property") or self.request.data.get("property_id")
+        if not property_id:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({"property": "Property ID is required."})
+        try:
+            prop = Property.objects.get(id=property_id, workspace=self.request.workspace)
+        except Property.DoesNotExist:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({"property": "Property not found."})
+        serializer.save(workspace=self.request.workspace, property=prop)
 
 
 @method_decorator(name="retrieve",      decorator=swagger_auto_schema(tags=_PROP_TAG))
@@ -456,7 +465,7 @@ class PublicPropertyDetailView(APIView):
             prop = (
                 Property.objects.filter(workspace=workspace, status="PUBLISHED")
                 .select_related("location")
-                .prefetch_related("pricing_plans", "gallery_images", "amenities")
+                .prefetch_related("pricing_plans", "gallery_images", "amenities", "bank_accounts", "documents")
                 .get(id=id)
             )
         except Property.DoesNotExist:
@@ -648,3 +657,46 @@ class PublicValidateReferralView(APIView):
             return Response({"valid": True, "rep_name": rep.name})
         except SalesRep.DoesNotExist:
             return Response({"valid": False, "rep_name": None})
+
+
+class PublicSiteInspectionCreateView(APIView):
+    """
+    POST /api/v1/public/<workspace_slug>/properties/<id>/book-inspection/
+    Public — no auth required. Books a site inspection and sends confirmation email.
+    """
+
+    permission_classes = []
+
+    def post(self, request, workspace_slug, id):
+        from core.models import Workspace
+        from customers.site_inspection_models import SiteInspection
+        from customers.site_inspection_serializers import SiteInspectionCreateSerializer
+        from customers.site_inspection_serializers import SiteInspectionSerializer
+        from notifications.services import NotificationService
+
+        try:
+            workspace = Workspace.objects.get(slug=workspace_slug, is_active=True)
+        except Workspace.DoesNotExist:
+            return Response({"detail": "Workspace not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            prop = Property.objects.get(id=id, workspace=workspace, status="PUBLISHED")
+        except Property.DoesNotExist:
+            return Response({"detail": "Property not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        data = {**request.data, "linked_property": str(prop.id), "property_name": prop.name}
+        serializer = SiteInspectionCreateSerializer(data=data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        inspection = serializer.save(workspace=workspace, linked_property=prop, property_name=prop.name)
+
+        try:
+            NotificationService.send_inspection_booking_email(inspection, workspace)
+        except Exception:
+            pass
+
+        return Response(
+            SiteInspectionSerializer(inspection, context={"request": request}).data,
+            status=status.HTTP_201_CREATED,
+        )

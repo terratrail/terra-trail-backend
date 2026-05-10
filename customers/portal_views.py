@@ -317,9 +317,15 @@ class PortalSubscriptionDetailView(APIView):
             .order_by("-created_at")
         )
 
+        bank_accounts = list(
+            subscription.property.bank_accounts.filter(is_active=True)
+            .values("id", "bank_name", "account_name", "account_number")
+        )
+
         return Response({
             "subscription": SubscriptionSerializer(subscription).data,
             "payment_history": PaymentSerializer(payments, many=True).data,
+            "bank_accounts": bank_accounts,
         })
 
 

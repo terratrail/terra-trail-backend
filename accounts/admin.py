@@ -4,17 +4,30 @@ from accounts.models import User, WorkspaceMembership, OTPToken
 
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
-    list_display = ["email", "full_name", "phone", "default_role", "is_active", "date_joined"]
+    list_display = [
+        "email",
+        "full_name",
+        "phone",
+        "default_role",
+        "is_active",
+        "date_joined",
+    ]
     list_filter = ["default_role", "is_active", "gender", "marital_status"]
     search_fields = ["email", "first_name", "last_name", "phone"]
     ordering = ["-date_joined"]
 
     fieldsets = (
         (None, {"fields": ("email", "password")}),
-        ("Personal Info", {"fields": ("title", "first_name", "last_name", "phone", "gender", "date_of_birth")}),
+        (
+            "Personal Info",
+            {"fields": ("title", "first_name", "last_name", "phone", "gender")},
+        ),
         ("Professional Info", {"fields": ("occupation", "marital_status")}),
         ("Location", {"fields": ("address", "country", "state", "nationality")}),
-        ("Permissions", {"fields": ("default_role", "is_active", "is_staff", "is_superuser")}),
+        (
+            "Permissions",
+            {"fields": ("default_role", "is_active", "is_staff", "is_superuser")},
+        ),
         ("Important dates", {"fields": ("last_login", "date_joined")}),
     )
 

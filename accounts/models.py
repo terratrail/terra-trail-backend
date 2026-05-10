@@ -81,12 +81,14 @@ class User(AbstractUser):
         max_length=10, choices=Gender.choices, blank=True, default=""
     )
     birth_month = models.PositiveSmallIntegerField(
-        null=True, blank=True,
+        null=True,
+        blank=True,
         validators=[MinValueValidator(1), MaxValueValidator(12)],
         help_text="Birthday month (1–12)",
     )
     birth_day = models.PositiveSmallIntegerField(
-        null=True, blank=True,
+        null=True,
+        blank=True,
         validators=[MinValueValidator(1), MaxValueValidator(31)],
         help_text="Birthday day (1–31)",
     )
@@ -124,6 +126,10 @@ class User(AbstractUser):
     @property
     def full_name(self):
         return f"{self.first_name} {self.last_name}".strip() or self.email
+
+    @property
+    def date_of_birth(self):
+        return f"{str(self.birth_day)}/{str(self.birth_month)}"
 
 
 class WorkspaceMembership(TimeStampedModel):

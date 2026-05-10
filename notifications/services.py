@@ -39,12 +39,15 @@ class NotificationService:
         message,
         html_message=None,
         related_installment=None,
+        async_send=True,
     ):
         """
         Send an email notification and log it.
 
-        Uses Django's configured EMAIL_BACKEND (console in dev, SMTP/SES in prod).
-        Pass html_message for rich HTML emails; plain message is always required as fallback.
+        When async_send=True (default) the actual SMTP delivery is handed off to
+        a Celery background task with up to 3 automatic retries.  If Celery is
+        unavailable the task falls back to synchronous delivery so that emails
+        are never silently dropped in development.
         """
         log = NotificationLog.objects.create(
             workspace=workspace,
@@ -52,9 +55,26 @@ class NotificationService:
             recipient=recipient,
             subject=subject,
             message=message,
+            status=NotificationLog.Status.PENDING,
             related_installment=related_installment,
         )
 
+        if async_send:
+            try:
+                from notifications.tasks import send_email_task
+                send_email_task.delay(
+                    log_id=log.pk,
+                    subject=subject,
+                    message=message,
+                    recipient=recipient,
+                    html_message=html_message,
+                )
+                return log
+            except Exception as broker_err:
+                # Broker unavailable — fall through to synchronous send
+                logger.warning(f"Celery broker unavailable, sending synchronously: {broker_err}")
+
+        # Synchronous fallback (also used when async_send=False)
         try:
             send_mail(
                 subject=subject,
@@ -67,7 +87,7 @@ class NotificationService:
             log.status = NotificationLog.Status.SENT
             log.sent_at = timezone.now()
         except Exception as e:
-            logger.error(f"Email send failed: {e}")
+            logger.error(f"Email send failed to {recipient}: {e}")
             log.status = NotificationLog.Status.FAILED
             log.error_message = str(e)
 
@@ -140,6 +160,89 @@ class NotificationService:
         return NotificationService.send_email(
             workspace=None,
             recipient=recipient,
+            subject=subject,
+            message=plain,
+            html_message=html,
+        )
+
+    @staticmethod
+    def send_inspection_booking_email(inspection, workspace):
+        """Send booking confirmation email to the person who booked an inspection."""
+        if not inspection.email:
+            return
+
+        prop_name = inspection.property_name or (
+            inspection.linked_property.name if inspection.linked_property else "the property"
+        )
+        date_str = inspection.inspection_date.strftime("%B %d, %Y") if inspection.inspection_date else ""
+        time_str = inspection.inspection_time.strftime("%I:%M %p") if inspection.inspection_time else ""
+
+        subject = f"Inspection Booking Confirmed — {prop_name}"
+        plain = (
+            f"Hi {inspection.name},\n\n"
+            f"Your site inspection request for {prop_name} has been received.\n\n"
+            f"Date: {date_str}\n"
+            f"Time: {time_str or 'To be confirmed'}\n"
+            f"Type: {inspection.get_inspection_type_display()}\n\n"
+            f"Our team will be in touch to confirm the appointment.\n\n"
+            f"— {workspace.name}"
+        )
+        html = _render_email_html("inspection_booking", {
+            "customer_name": inspection.name,
+            "property_name": prop_name,
+            "inspection_date": date_str,
+            "inspection_time": time_str,
+            "inspection_type": inspection.get_inspection_type_display(),
+            "persons": inspection.persons,
+            "notes": inspection.notes,
+            "workspace_name": workspace.name,
+            "support_email": getattr(workspace, "support_email", settings.DEFAULT_FROM_EMAIL),
+        })
+        NotificationService.send_email(
+            workspace=workspace,
+            recipient=inspection.email,
+            subject=subject,
+            message=plain,
+            html_message=html,
+        )
+
+    @staticmethod
+    def send_subscription_confirmation_email(subscription):
+        """Send a subscription/purchase confirmation email to the customer."""
+        customer = subscription.customer
+        workspace = subscription.workspace
+        if not customer.email:
+            return
+
+        prop = subscription.property
+        plan = subscription.pricing_plan
+        plan_name = plan.plan_name if plan else ""
+        total = f"{subscription.total_price:,.2f}" if subscription.total_price else ""
+        payment_type = (plan.payment_type if plan else "OUTRIGHT").upper()
+
+        subject = f"Property Purchase Confirmed — {prop.name}"
+        plain = (
+            f"Dear {customer.full_name},\n\n"
+            f"Congratulations! Your subscription to {prop.name} has been confirmed.\n\n"
+            f"Plan: {plan_name}\n"
+            f"Total Price: ₦{total}\n"
+            f"Payment Type: {payment_type.capitalize()}\n\n"
+            f"Thank you for choosing {workspace.name}. We'll be in touch with next steps.\n\n"
+            f"— {workspace.name}"
+        )
+        html = _render_email_html("property_purchase", {
+            "customer_name": customer.full_name,
+            "property_name": prop.name,
+            "property_location": prop.location.city if hasattr(prop, "location") and prop.location else "",
+            "plan_name": plan_name,
+            "total_price": total,
+            "payment_type": payment_type.capitalize(),
+            "workspace_name": workspace.name,
+            "support_email": getattr(workspace, "support_email", settings.DEFAULT_FROM_EMAIL),
+        })
+        NotificationService.send_email(
+            workspace=workspace,
+            recipient=customer.email,
             subject=subject,
             message=plain,
             html_message=html,

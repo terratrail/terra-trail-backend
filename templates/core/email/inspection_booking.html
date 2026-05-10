@@ -1,0 +1,63 @@
+{% extends "core/email/base_email.html" %}
+{% block subject %}Inspection Booking Confirmed — {{ property_name }}{% endblock %}
+
+{% block body %}
+  <div style="text-align:center; margin-bottom:24px;">
+    <span class="badge-info">&#128197; Booking Confirmed</span>
+  </div>
+
+  <p class="email-title">Your Inspection is Booked!</p>
+  <p class="email-text">
+    Hi <strong>{{ customer_name }}</strong>,<br>
+    Great news! Your site inspection request for <strong>{{ property_name }}</strong> has been received and is being processed.
+    Our team will reach out to confirm your appointment shortly.
+  </p>
+
+  <table class="info-table">
+    <tr>
+      <td>Property</td>
+      <td>{{ property_name }}</td>
+    </tr>
+    <tr>
+      <td>Date</td>
+      <td>{{ inspection_date }}</td>
+    </tr>
+    <tr>
+      <td>Time</td>
+      <td>{% if inspection_time %}{{ inspection_time }}{% else %}To be confirmed{% endif %}</td>
+    </tr>
+    <tr>
+      <td>Type</td>
+      <td>{{ inspection_type }}</td>
+    </tr>
+    {% if persons and persons > 1 %}
+    <tr>
+      <td>Attendees</td>
+      <td>{{ persons }} person(s)</td>
+    </tr>
+    {% endif %}
+    {% if notes %}
+    <tr>
+      <td>Notes</td>
+      <td>{{ notes }}</td>
+    </tr>
+    {% endif %}
+  </table>
+
+  <div class="alert-box">
+    <strong>What happens next?</strong><br>
+    A member of our team will contact you within 24 hours to confirm the exact time and provide meeting point details.
+  </div>
+
+  <hr class="divider">
+
+  <p class="email-text" style="font-size:13px;">
+    If you need to reschedule or have questions, please contact us at
+    <a href="mailto:{{ support_email }}" style="color:#059669;">{{ support_email }}</a>.
+    We look forward to showing you the property!
+  </p>
+
+  <p class="email-text" style="font-size:13px; margin-top:0;">
+    — The <strong>{{ workspace_name }}</strong> Team
+  </p>
+{% endblock %}

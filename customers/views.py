@@ -254,6 +254,12 @@ class SubscriptionCreateView(APIView):
             notes=notes,
         )
 
+        try:
+            from notifications.services import NotificationService
+            NotificationService.send_subscription_confirmation_email(subscription)
+        except Exception:
+            pass
+
         return Response(
             SubscriptionSerializer(subscription).data,
             status=status.HTTP_201_CREATED,

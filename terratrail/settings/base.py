@@ -291,8 +291,15 @@ EMAIL_HOST = config("EMAIL_HOST", default="")
 EMAIL_PORT = config("EMAIL_PORT", default=587, cast=int)
 EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
-EMAIL_USE_TLS = True
-DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="noreply@terratrail.io")
+EMAIL_USE_TLS = config("EMAIL_USE_TLS", default=True, cast=bool)
+EMAIL_USE_SSL = config("EMAIL_USE_SSL", default=False, cast=bool)
+# When using SMTP, the From address MUST match the authenticated user.
+# Fall back to EMAIL_HOST_USER if set, so Gmail/SMTP doesn't reject the mail.
+_smtp_user = config("EMAIL_HOST_USER", default="")
+DEFAULT_FROM_EMAIL = config(
+    "DEFAULT_FROM_EMAIL",
+    default=_smtp_user if _smtp_user else "noreply@terratrail.io",
+)
 
 
 # ---------------------------------------------------------------------------

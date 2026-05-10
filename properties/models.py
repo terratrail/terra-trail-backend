@@ -429,6 +429,11 @@ class InspectionConfig(WorkspaceScopedModel):
     )
     time_from = models.TimeField(null=True, blank=True)
     time_to = models.TimeField(null=True, blank=True)
+    time_slots = models.JSONField(
+        default=list,
+        help_text='[{id, label, start_time, mode: RECURRING|ONE_TIME, date, is_active}]',
+    )
+    is_active = models.BooleanField(default=True, help_text="Whether this inspection schedule is open for bookings")
     max_persons = models.PositiveSmallIntegerField(default=5)
     notes = models.TextField(blank=True, default="")
 
