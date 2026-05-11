@@ -219,6 +219,7 @@ class WorkspaceInvitation(WorkspaceScopedModel):
         ADMIN = "ADMIN", "Admin"
         CUSTOMER = "CUSTOMER", "Customer"
         SALES_REP = "SALES_REP", "Sales Rep"
+        CUSTOMER_REP = "CUSTOMER_REP", "Customer Rep"
 
     email = models.EmailField()
     role = models.CharField(

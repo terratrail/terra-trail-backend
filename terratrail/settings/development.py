@@ -7,6 +7,9 @@ TerraTrail — Development settings.
 
 CORS_ALLOW_ALL_ORIGINS = True
 
+# Print emails to console in dev — no SMTP server required.
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+
 # Run Celery tasks synchronously in-process — no Redis/broker required in dev.
 CELERY_TASK_ALWAYS_EAGER = True
 CELERY_TASK_EAGER_PROPAGATES = True

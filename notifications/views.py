@@ -157,6 +157,26 @@ class DashboardView(APIView):
             workspace=workspace, status=Subscription.Status.ACTIVE
         ).count()
 
+        completed_subscriptions = Subscription.objects.filter(
+            workspace=workspace, status=Subscription.Status.COMPLETED
+        ).count()
+
+        defaulting_subscriptions = Subscription.objects.filter(
+            workspace=workspace, status=Subscription.Status.DEFAULTING
+        ).count()
+
+        # Allocation stats (from completed subscriptions)
+        pending_allocation = Subscription.objects.filter(
+            workspace=workspace,
+            status=Subscription.Status.COMPLETED,
+            plot_number="",
+        ).count()
+
+        allocated = Subscription.objects.filter(
+            workspace=workspace,
+            status=Subscription.Status.COMPLETED,
+        ).exclude(plot_number="").count()
+
         total_customers = (
             Customer.objects.filter(workspace=workspace).count()
         )
@@ -168,6 +188,9 @@ class DashboardView(APIView):
         pending_payments = Payment.objects.filter(
             workspace=workspace, status=Payment.Status.PENDING
         ).count()
+
+        from properties.models import Property
+        total_properties = Property.objects.filter(workspace=workspace).count()
 
         return Response({
             # Date-filtered financial
@@ -181,10 +204,15 @@ class DashboardView(APIView):
             "commission_pending":   str(commission_pending),
             "commission_potential": str(commission_potential),
             # Counts (always-current)
-            "active_subscriptions": active_subscriptions,
-            "total_customers":      total_customers,
-            "overdue_installments": overdue_installments,
-            "pending_payments":     pending_payments,
+            "active_subscriptions":   active_subscriptions,
+            "completed_subscriptions": completed_subscriptions,
+            "defaulting_subscriptions": defaulting_subscriptions,
+            "pending_allocation":     pending_allocation,
+            "allocated":              allocated,
+            "total_customers":        total_customers,
+            "total_properties":       total_properties,
+            "overdue_installments":   overdue_installments,
+            "pending_payments":       pending_payments,
             # Applied filters (echo back for UI awareness)
             "filters": {
                 "date_from": date_from.isoformat() if date_from else None,

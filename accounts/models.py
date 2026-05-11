@@ -144,6 +144,7 @@ class WorkspaceMembership(TimeStampedModel):
         ADMIN = "ADMIN", "Admin"
         CUSTOMER = "CUSTOMER", "Customer"
         SALES_REP = "SALES_REP", "Sales Rep"
+        CUSTOMER_REP = "CUSTOMER_REP", "Customer Rep"
 
     user = models.ForeignKey(
         User,
