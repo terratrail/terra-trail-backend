@@ -140,3 +140,36 @@ class IsSalesRep(BasePermission):
             role="SALES_REP",
             is_active=True,
         ).exists()
+
+
+class IsCustomerRep(BasePermission):
+    """Allows access to customer representatives."""
+
+    def has_permission(self, request, view):
+        if not request.workspace or not request.user.is_authenticated:
+            return False
+        return request.user.workspace_memberships.filter(
+            workspace=request.workspace,
+            role="CUSTOMER_REP",
+            is_active=True,
+        ).exists()
+
+
+class IsAdminOrCustomerRep(BasePermission):
+    """Allows access to owners, admins, and customer reps."""
+
+    def has_permission(self, request, view):
+        if not request.workspace or not request.user.is_authenticated:
+            return False
+        return request.user.workspace_memberships.filter(
+            workspace=request.workspace,
+            role__in=["OWNER", "ADMIN", "CUSTOMER_REP"],
+            is_active=True,
+        ).exists()
+
+
+def get_workspace_settings(workspace):
+    """Return WorkspaceSettings for workspace, creating if absent."""
+    from core.models import WorkspaceSettings
+    obj, _ = WorkspaceSettings.objects.get_or_create(workspace=workspace)
+    return obj

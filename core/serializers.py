@@ -99,7 +99,7 @@ class WorkspaceMinimalSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Workspace
-        fields = ["id", "name", "slug", "logo", "role"]
+        fields = ["id", "name", "slug", "logo", "billing_plan", "role"]
 
 
 class SelectPlanSerializer(serializers.Serializer):

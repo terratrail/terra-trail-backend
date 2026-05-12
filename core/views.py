@@ -140,10 +140,16 @@ class WorkspaceSettingsView(generics.RetrieveUpdateAPIView):
     GET/PATCH /api/v1/workspaces/settings/
 
     Retrieve or update granular permission and notification settings.
+    Only OWNER/ADMIN can write; all workspace members can read.
     """
 
     serializer_class = WorkspaceSettingsSerializer
-    permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        from core.permissions import IsWorkspaceAdmin
+        if self.request.method in ("PUT", "PATCH"):
+            return [IsAuthenticated(), IsWorkspaceAdmin()]
+        return [IsAuthenticated()]
 
     def get_object(self):
         try:
@@ -520,7 +526,7 @@ class WorkspaceMemberDetailView(APIView):
 
         role = request.data.get("role")
         is_active = request.data.get("is_active")
-        if role and role in ["ADMIN", "SALES_REP", "CUSTOMER"]:
+        if role and role in ["ADMIN", "SALES_REP", "CUSTOMER", "CUSTOMER_REP"]:
             membership.role = role
         if is_active is not None:
             membership.is_active = bool(is_active)
