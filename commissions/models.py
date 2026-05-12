@@ -48,6 +48,12 @@ class SalesRep(WorkspaceScopedModel):
     )
     is_active = models.BooleanField(default=True)
 
+    # Contact / payout details
+    address = models.TextField(blank=True, default="")
+    bank_name = models.CharField(max_length=100, blank=True, default="")
+    bank_account_number = models.CharField(max_length=20, blank=True, default="")
+    bank_account_name = models.CharField(max_length=255, blank=True, default="")
+
     class Meta:
         unique_together = ["workspace", "referral_code"]
         indexes = [

@@ -50,6 +50,14 @@ class Property(WorkspaceScopedModel):
     featured_image = models.ImageField(
         upload_to="properties/images/", blank=True, null=True
     )
+    estate_land_title = models.CharField(
+        max_length=255, blank=True, default="",
+        help_text="Title/deed reference number for the estate land.",
+    )
+    brochure = models.FileField(
+        upload_to="properties/brochures/", blank=True, null=True,
+        help_text="PDF brochure for the property.",
+    )
     available_units = models.PositiveIntegerField(
         default=0,
         help_text="Number of plots/units available for sale",

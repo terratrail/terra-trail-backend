@@ -18,6 +18,7 @@ class SalesRepSerializer(serializers.ModelSerializer):
             "id", "name", "email", "phone", "tier",
             "referral_code", "commission_type", "commission_rate",
             "is_active", "total_earned", "total_pending",
+            "address", "bank_name", "bank_account_number", "bank_account_name",
             "created_at", "updated_at",
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
@@ -39,6 +40,7 @@ class SalesRepCreateSerializer(serializers.ModelSerializer):
         fields = [
             "name", "email", "phone", "tier",
             "referral_code", "commission_type", "commission_rate",
+            "address", "bank_name", "bank_account_number", "bank_account_name",
         ]
 
 

@@ -236,7 +236,7 @@ class _PricingPlanNestedSerializer(serializers.ModelSerializer):
 class _BankAccountNestedSerializer(serializers.ModelSerializer):
     class Meta:
         model = BankAccount
-        fields = ["bank_name", "account_name", "account_number"]
+        fields = ["bank_name", "account_name", "account_number", "is_active"]
 
 
 class _LandSizeNestedSerializer(serializers.ModelSerializer):
@@ -315,6 +315,8 @@ class PropertyDetailSerializer(serializers.ModelSerializer):
             "unit_measurement",
             "status",
             "featured_image",
+            "estate_land_title",
+            "brochure",
             "location",
             "gallery_images",
             "land_sizes",
@@ -421,6 +423,7 @@ class PropertyCreateSerializer(serializers.ModelSerializer):
             "name",
             "property_type",
             "description",
+            "estate_land_title",
             "total_sqms",
             "available_units",
             "unit_measurement",
