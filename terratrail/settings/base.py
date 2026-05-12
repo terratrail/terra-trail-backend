@@ -21,7 +21,7 @@ DEBUG = config("DEBUG", default=False, cast=bool)
 
 ALLOWED_HOSTS = config(
     "ALLOWED_HOSTS",
-    default="localhost,127.0.0.1,.localhost,terra-trail-backend.onrender.com,terratrail.app",
+    default="localhost,127.0.0.1,.localhost,terra-trail-backend.onrender.com,terratrail.app,https://terratrail.app",
     cast=Csv(),
 )
 
@@ -37,6 +37,16 @@ CORS_ALLOW_HEADERS = [
     "x-csrftoken",
     "x-requested-with",
     "x-workspace-slug",  # Add this line
+]
+
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_METHODS = [
+    "DELETE",
+    "GET",
+    "OPTIONS",
+    "PATCH",
+    "POST",
+    "PUT",
 ]
 
 
@@ -274,6 +284,8 @@ CORS_ALLOWED_ORIGINS = config(
         "http://localhost:3000,http://127.0.0.1:3000,"
         "http://localhost:5173,http://127.0.0.1:5173,"
         "https://terra-trail.vercel.app"
+        "https://terratrail.app",
+        "https://www.terratrail.app",
     ),
     cast=Csv(),
 )
