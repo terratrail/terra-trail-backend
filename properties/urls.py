@@ -25,6 +25,7 @@ from properties.views import (
     PropertyPublishView,
     PropertyUnpublishView,
 )
+from properties.bulk_upload_views import PropertyBulkUploadView, PropertyBulkTemplateView
 
 app_name = "properties"
 
@@ -57,6 +58,10 @@ urlpatterns = [
     # Gallery images  (?property_id=<uuid> to filter)
     path("gallery/", PropertyGalleryListCreateView.as_view(), name="gallery-list-create"),
     path("gallery/<uuid:id>/", PropertyGalleryDetailView.as_view(), name="gallery-detail"),
+
+    # Bulk upload
+    path("bulk-upload/", PropertyBulkUploadView.as_view(), name="property-bulk-upload"),
+    path("bulk-upload/template/", PropertyBulkTemplateView.as_view(), name="property-bulk-template"),
 
     # Inspection Config (per property)
     path("<uuid:id>/inspection-config/", InspectionConfigView.as_view(), name="inspection-config"),

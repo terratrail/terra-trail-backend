@@ -17,6 +17,7 @@ from customers.site_inspection_views import (
     SiteInspectionListCreateView,
     SiteInspectionDetailView,
 )
+from customers.bulk_upload_views import CustomerBulkUploadView, CustomerBulkTemplateView
 
 app_name = "customers"
 
@@ -38,4 +39,8 @@ urlpatterns = [
     # Site Inspections
     path("site-inspections/", SiteInspectionListCreateView.as_view(), name="site-inspection-list"),
     path("site-inspections/<uuid:id>/", SiteInspectionDetailView.as_view(), name="site-inspection-detail"),
+
+    # Bulk upload
+    path("bulk-upload/", CustomerBulkUploadView.as_view(), name="customer-bulk-upload"),
+    path("bulk-upload/template/", CustomerBulkTemplateView.as_view(), name="customer-bulk-template"),
 ]

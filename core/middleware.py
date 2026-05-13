@@ -30,7 +30,9 @@ PUBLIC_PATHS = [
     r"^/$",
     r"^/api/v1/workspaces/invites/[^/]+/?$",  # GET invite detail — public preview
     r"^/api/v1/workspaces/invites/[^/]+/accept/?$",  # POST accept — workspace from token, not header
-    r"^/api/v1/public/",                              # Public estate listing — no workspace header needed
+    r"^/api/v1/public/",  # Public estate listing — no workspace header needed
+    r"^/api/v1/properties/bulk-upload/template/",
+    r"^/api/v1/customers/bulk-upload/template/",
 ]
 
 

@@ -40,7 +40,51 @@ services:
         value: "demiladebamgboye@gmail.com"
       - key: DJANGO_SUPERUSER_PASSWORD
         generateValue: false
-      # Set these manually in Render dashboard:
+      # ── Email (set values in Render dashboard, not here) ──────────────────
+      - key: EMAIL_BACKEND
+        value: "django.core.mail.backends.smtp.EmailBackend"
+      # Set these in Render dashboard → Environment:
+      # EMAIL_HOST, EMAIL_HOST_USER, EMAIL_HOST_PASSWORD, DEFAULT_FROM_EMAIL
+      # ── Other secrets (set in Render dashboard) ───────────────────────────
       # AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_STORAGE_BUCKET_NAME
       # CELERY_BROKER_URL (Redis URL from Render Redis or Upstash)
-      # EMAIL_HOST, EMAIL_HOST_USER, EMAIL_HOST_PASSWORD, DEFAULT_FROM_EMAIL
+
+  # ── Celery Worker — processes async email/SMS tasks ──────────────────────
+  - type: worker
+    name: terratrail-worker
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: celery -A terratrail worker --loglevel=info --concurrency=2
+    plan: free
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: terratrail.settings
+      - key: DATABASE_URL
+        fromDatabase:
+          name: terratrail-db
+          property: connectionString
+      - key: SECRET_KEY
+        sync: false
+      - key: EMAIL_BACKEND
+        value: "django.core.mail.backends.smtp.EmailBackend"
+      # Set in Render dashboard: CELERY_BROKER_URL, EMAIL_HOST, EMAIL_HOST_USER,
+      # EMAIL_HOST_PASSWORD, DEFAULT_FROM_EMAIL
+
+  # ── Celery Beat — runs scheduled tasks (reminders, overdue checks) ────────
+  - type: worker
+    name: terratrail-beat
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: celery -A terratrail beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    plan: free
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: terratrail.settings
+      - key: DATABASE_URL
+        fromDatabase:
+          name: terratrail-db
+          property: connectionString
+      - key: SECRET_KEY
+        sync: false
+      # Set in Render dashboard: CELERY_BROKER_URL
+
