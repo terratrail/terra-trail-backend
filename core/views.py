@@ -498,6 +498,167 @@ class PlanUsageView(APIView):
         return Response(usage)
 
 
+class SubmitPlanReceiptView(APIView):
+    """
+    POST /api/v1/workspaces/billing/submit-receipt/
+
+    Upload a payment receipt for a plan switch request.
+    Sets the workspace into a pending-verification state.
+    The plan is NOT changed until a staff member approves the receipt.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        from django.utils import timezone as tz
+        from core.plans import PLAN_CATALOGUE
+
+        plan = request.data.get("plan", "").strip().upper()
+        receipt = request.FILES.get("receipt")
+
+        valid_keys = [p["key"] for p in PLAN_CATALOGUE if p["key"] != "FREE"]
+        if plan not in valid_keys:
+            return Response(
+                {"detail": f"Invalid plan. Choose one of: {', '.join(valid_keys)}."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if not receipt:
+            return Response({"detail": "Receipt file is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        workspace = request.workspace
+
+        # Clear previous receipt file if one exists
+        if workspace.billing_pending_receipt:
+            workspace.billing_pending_receipt.delete(save=False)
+
+        workspace.billing_pending_plan = plan
+        workspace.billing_pending_receipt = receipt
+        workspace.billing_pending_at = tz.now()
+        workspace.save(update_fields=["billing_pending_plan", "billing_pending_receipt", "billing_pending_at", "updated_at"])
+
+        WorkspaceActivity.objects.create(
+            workspace=workspace,
+            actor=request.user,
+            action_text=f"submitted payment receipt for plan switch to {plan}",
+            category="Billing",
+        )
+
+        return Response(
+            {"detail": "Receipt submitted. Your plan will be activated after verification (within 24 hours)."},
+            status=status.HTTP_200_OK,
+        )
+
+
+class ReviewPlanReceiptView(APIView):
+    """
+    POST /api/v1/workspaces/billing/review-receipt/
+
+    Staff-only endpoint to approve or reject a pending plan switch receipt.
+    action=approve → activates the requested plan.
+    action=reject  → clears the pending state without changing the plan.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        if not request.user.is_staff:
+            return Response({"detail": "Staff access required."}, status=status.HTTP_403_FORBIDDEN)
+
+        action = request.data.get("action", "").lower()
+        workspace_id = request.data.get("workspace_id")
+
+        if action not in ("approve", "reject"):
+            return Response({"detail": "action must be 'approve' or 'reject'."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            workspace = Workspace.objects.get(pk=workspace_id)
+        except Workspace.DoesNotExist:
+            return Response({"detail": "Workspace not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        if not workspace.billing_pending_plan:
+            return Response({"detail": "No pending receipt for this workspace."}, status=status.HTTP_400_BAD_REQUEST)
+
+        pending_plan = workspace.billing_pending_plan
+
+        if action == "approve":
+            workspace.billing_plan = pending_plan
+            workspace.billing_pending_plan = ""
+            if workspace.billing_pending_receipt:
+                workspace.billing_pending_receipt.delete(save=False)
+            workspace.billing_pending_receipt = None
+            workspace.billing_pending_at = None
+            workspace.save(update_fields=[
+                "billing_plan", "billing_pending_plan",
+                "billing_pending_receipt", "billing_pending_at", "updated_at",
+            ])
+            WorkspaceActivity.objects.create(
+                workspace=workspace,
+                actor=request.user,
+                action_text=f"approved plan switch to {pending_plan}",
+                category="Billing",
+            )
+            return Response({"detail": f"Plan switch to {pending_plan} approved."})
+        else:
+            workspace.billing_pending_plan = ""
+            if workspace.billing_pending_receipt:
+                workspace.billing_pending_receipt.delete(save=False)
+            workspace.billing_pending_receipt = None
+            workspace.billing_pending_at = None
+            workspace.save(update_fields=[
+                "billing_pending_plan", "billing_pending_receipt", "billing_pending_at", "updated_at",
+            ])
+            WorkspaceActivity.objects.create(
+                workspace=workspace,
+                actor=request.user,
+                action_text=f"rejected plan switch receipt (requested plan: {pending_plan})",
+                category="Billing",
+            )
+            return Response({"detail": "Receipt rejected. Pending plan switch cleared."})
+
+
+class UpdateSlugView(APIView):
+    """
+    PATCH /api/v1/workspaces/update-slug/
+
+    Change the workspace slug (subdomain). Only available on Starter plan or above.
+    Enforces uniqueness at the API layer.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request):
+        from django.utils.text import slugify as dj_slugify
+
+        workspace = request.workspace
+        paid_plans = {"STARTER", "GROWTH", "SCALE", "ENTERPRISE"}
+        if workspace.billing_plan not in paid_plans:
+            return Response(
+                {"detail": "Custom subdomain requires Starter plan or above."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        raw_slug = request.data.get("slug", "").strip()
+        slug = dj_slugify(raw_slug)
+        if not slug:
+            return Response({"detail": "Invalid slug."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if Workspace.objects.filter(slug=slug).exclude(pk=workspace.pk).exists():
+            return Response({"detail": "This subdomain is already taken."}, status=status.HTTP_409_CONFLICT)
+
+        old_slug = workspace.slug
+        workspace.slug = slug
+        workspace.save(update_fields=["slug", "updated_at"])
+
+        WorkspaceActivity.objects.create(
+            workspace=workspace,
+            actor=request.user,
+            action_text=f"changed workspace subdomain from '{old_slug}' to '{slug}'",
+            category="Workspace",
+        )
+
+        return Response({"slug": slug, "detail": "Subdomain updated successfully."})
+
+
 # ---------------------------------------------------------------------------
 # Workspace Events — recent actionable items for the notification bell
 # ---------------------------------------------------------------------------

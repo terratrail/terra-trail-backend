@@ -18,9 +18,14 @@ class WorkspaceSerializer(serializers.ModelSerializer):
             "website_url", "instagram_url", "facebook_url", "twitter_url",
             "linkedin_url", "youtube_url",
             "billing_plan", "plan_expires_at",
+            "billing_pending_plan", "billing_pending_at",
             "is_active", "created_at", "updated_at",
         ]
-        read_only_fields = ["id", "slug", "billing_plan", "plan_expires_at", "created_at", "updated_at"]
+        read_only_fields = [
+            "id", "slug", "billing_plan", "plan_expires_at",
+            "billing_pending_plan", "billing_pending_at",
+            "created_at", "updated_at",
+        ]
 
 
 class WorkspaceSettingsSerializer(serializers.ModelSerializer):
@@ -50,7 +55,15 @@ class WorkspaceSettingsSerializer(serializers.ModelSerializer):
 class WorkspaceActivitySerializer(serializers.ModelSerializer):
     """Activity log serializer."""
 
-    actor_name = serializers.CharField(source="actor.full_name", read_only=True)
+    actor_name = serializers.SerializerMethodField()
+
+    def get_actor_name(self, obj):
+        if obj.actor:
+            name = obj.actor.full_name or ""
+            if not name.strip():
+                name = obj.actor.email or "Unknown"
+            return name
+        return "Terratrail System"
 
     class Meta:
         model = WorkspaceActivity

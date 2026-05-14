@@ -297,7 +297,7 @@ CORS_ALLOWED_ORIGINS = config(
 
 EMAIL_BACKEND = config(
     "EMAIL_BACKEND",
-    default="django.core.mail.backends.console.EmailBackend",
+    default="notifications.resend_backend.ResendEmailBackend",
 )
 EMAIL_HOST = config("EMAIL_HOST", default="")
 EMAIL_PORT = config("EMAIL_PORT", default=587, cast=int)
@@ -312,6 +312,10 @@ DEFAULT_FROM_EMAIL = config(
     "DEFAULT_FROM_EMAIL",
     default=_smtp_user if _smtp_user else "noreply@terratrail.io",
 )
+
+# Resend
+RESEND_API_KEY = config("RESEND_API_KEY", default="")
+MAIL_DOMAIN    = config("MAIL_DOMAIN", default="mail.terratrail.app")
 
 
 # ---------------------------------------------------------------------------

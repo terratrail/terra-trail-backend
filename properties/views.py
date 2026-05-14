@@ -5,7 +5,7 @@ Properties views — CRUD and status management endpoints.
 from django.db.models import Count, Min
 from django.utils.decorators import method_decorator
 from rest_framework import generics, status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from drf_yasg.utils import swagger_auto_schema
@@ -420,6 +420,45 @@ class PropertyGalleryDetailView(generics.RetrieveUpdateDestroyAPIView):
 # ---------------------------------------------------------------------------
 # Public (unauthenticated) endpoints
 # ---------------------------------------------------------------------------
+
+
+class PublicWorkspaceInfoView(APIView):
+    """
+    GET /api/v1/public/<workspace_slug>/info/
+    No auth required — returns public workspace metadata.
+    """
+
+    permission_classes = [AllowAny]
+
+    def get(self, request, workspace_slug):
+        from core.models import Workspace
+        try:
+            ws = Workspace.objects.get(slug=workspace_slug, is_active=True)
+        except Workspace.DoesNotExist:
+            return Response({"detail": "Workspace not found."}, status=404)
+
+        logo_url = None
+        if ws.logo:
+            try:
+                logo_url = request.build_absolute_uri(ws.logo.url)
+            except Exception:
+                logo_url = None
+
+        return Response({
+            "id": str(ws.id),
+            "name": ws.name,
+            "slug": ws.slug,
+            "logo": logo_url,
+            "support_email": ws.support_email,
+            "support_whatsapp": ws.support_whatsapp,
+            "website_url": ws.website_url,
+            "instagram_url": ws.instagram_url,
+            "facebook_url": ws.facebook_url,
+            "twitter_url": ws.twitter_url,
+            "linkedin_url": ws.linkedin_url,
+            "youtube_url": ws.youtube_url,
+            "create_estate_public_pages": ws.create_estate_public_pages,
+        })
 
 
 class PublicPropertyListView(APIView):

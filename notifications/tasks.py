@@ -32,18 +32,21 @@ logger = logging.getLogger(__name__)
     autoretry_for=(Exception,),
     retry_backoff=True,
 )
-def send_email_task(self, log_id, subject, message, recipient, html_message=None):
+def send_email_task(self, log_id, subject, message, recipient, html_message=None, from_email=None):
     """
     Background email delivery task with automatic retry on failure.
     Accepts a NotificationLog PK so it can update status after delivery.
     """
+    from django.conf import settings
     from notifications.models import NotificationLog
+
+    _from = from_email or settings.DEFAULT_FROM_EMAIL
 
     try:
         send_mail(
             subject=subject,
             message=message,
-            from_email=settings.DEFAULT_FROM_EMAIL,
+            from_email=_from,
             recipient_list=[recipient],
             html_message=html_message,
             fail_silently=False,

@@ -60,6 +60,11 @@ class SiteInspection(WorkspaceScopedModel):
         default=Category.RESIDENTIAL,
     )
     persons = models.PositiveSmallIntegerField(default=1)
+    attendees = models.JSONField(
+        default=list,
+        blank=True,
+        help_text='List of attendees: [{"name": "...", "phone": "...", "email": "..."}]',
+    )
     status = models.CharField(
         max_length=20,
         choices=Status.choices,

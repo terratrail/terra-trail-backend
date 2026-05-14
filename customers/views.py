@@ -254,6 +254,17 @@ class SubscriptionCreateView(APIView):
             notes=notes,
         )
 
+        # Auto-convert matching site inspections
+        from customers.site_inspection_models import SiteInspection
+        from django.db import models as _models
+        SiteInspection.objects.filter(
+            workspace=subscription.workspace,
+            converted_customer__isnull=True,
+        ).filter(
+            _models.Q(email__iexact=customer.email) |
+            _models.Q(phone=customer.phone)
+        ).update(converted_customer=customer)
+
         try:
             from notifications.services import NotificationService
             NotificationService.send_subscription_confirmation_email(subscription)

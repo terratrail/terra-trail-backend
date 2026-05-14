@@ -8,7 +8,8 @@ from core.views import (
     WorkspaceSettingsView, WorkspaceActivityListView, WorkspaceMembersListView,
     InviteMemberView, InviteDetailView, AcceptInviteView, MyMembershipView,
     PlanListView, SelectPlanView, PlanUsageView, WorkspaceEventsView,
-    WorkspaceMemberDetailView,
+    WorkspaceMemberDetailView, SubmitPlanReceiptView, ReviewPlanReceiptView,
+    UpdateSlugView,
 )
 
 app_name = "core"
@@ -31,6 +32,11 @@ urlpatterns = [
     path("billing/plans/", PlanListView.as_view(), name="billing-plans"),
     path("billing/select/", SelectPlanView.as_view(), name="billing-select"),
     path("billing/usage/", PlanUsageView.as_view(), name="billing-usage"),
+    path("billing/submit-receipt/", SubmitPlanReceiptView.as_view(), name="billing-submit-receipt"),
+    path("billing/review-receipt/", ReviewPlanReceiptView.as_view(), name="billing-review-receipt"),
+
+    # Slug / subdomain
+    path("update-slug/", UpdateSlugView.as_view(), name="workspace-update-slug"),
 
     # Notification events
     path("events/", WorkspaceEventsView.as_view(), name="workspace-events"),

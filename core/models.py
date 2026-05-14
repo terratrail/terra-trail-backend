@@ -68,7 +68,14 @@ class Workspace(TimeStampedModel):
         default=BillingPlan.FREE
     )
     plan_expires_at = models.DateTimeField(null=True, blank=True)
-    
+
+    # Pending plan switch — receipt under review
+    billing_pending_plan = models.CharField(max_length=20, blank=True, default="")
+    billing_pending_receipt = models.FileField(
+        upload_to="workspaces/receipts/", blank=True, null=True
+    )
+    billing_pending_at = models.DateTimeField(null=True, blank=True)
+
     is_active = models.BooleanField(default=True)
 
     class Meta:

@@ -10,6 +10,7 @@ from datetime import datetime
 
 from django.conf import settings
 from django.core.mail import send_mail
+from notifications.sender import resolve_sender
 from django.template.loader import render_to_string
 from django.utils import timezone
 
@@ -68,6 +69,7 @@ class NotificationService:
                     message=message,
                     recipient=recipient,
                     html_message=html_message,
+                    from_email=resolve_sender(workspace),
                 )
                 return log
             except Exception as broker_err:
@@ -79,7 +81,7 @@ class NotificationService:
             send_mail(
                 subject=subject,
                 message=message,
-                from_email=settings.DEFAULT_FROM_EMAIL,
+                from_email=resolve_sender(workspace),
                 recipient_list=[recipient],
                 html_message=html_message,
                 fail_silently=False,

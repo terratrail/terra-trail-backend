@@ -28,6 +28,7 @@ class SiteInspectionSerializer(serializers.ModelSerializer):
             "inspection_type",
             "category",
             "persons",
+            "attendees",
             "status",
             "attended",
             "notes",
@@ -61,6 +62,8 @@ class SiteInspectionSerializer(serializers.ModelSerializer):
 
 
 class SiteInspectionCreateSerializer(serializers.ModelSerializer):
+    attendees = serializers.JSONField(required=False, default=list)
+
     class Meta:
         model = SiteInspection
         fields = [
@@ -74,5 +77,6 @@ class SiteInspectionCreateSerializer(serializers.ModelSerializer):
             "inspection_type",
             "category",
             "persons",
+            "attendees",
             "notes",
         ]
