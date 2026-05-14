@@ -28,7 +28,7 @@ class PlanLimitExceeded(Exception):
 class PlanGuard:
 
     # Roles that are unlimited on every plan — never count against the cap
-    _UNLIMITED_ROLES = {"SALES_REP", "CUSTOMER"}
+    _UNLIMITED_ROLES = {"SALES_REP", "CUSTOMER", "CUSTOMER_REP"}
 
     # ------------------------------------------------------------------
     # Internal helpers

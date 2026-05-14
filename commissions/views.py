@@ -105,6 +105,117 @@ class CommissionListView(generics.ListAPIView):
         return qs
 
 
+class MyRepStatsView(APIView):
+    """GET /api/v1/commissions/my-stats/ — stats for the authenticated sales rep"""
+
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(tags=_COMM_TAG)
+    def get(self, request):
+        from django.db.models import Sum
+
+        try:
+            rep = SalesRep.objects.get(
+                email=request.user.email,
+                workspace=request.workspace,
+            )
+        except SalesRep.DoesNotExist:
+            return Response(
+                {"detail": "Not a sales rep in this workspace."},
+                status=404,
+            )
+
+        comms = Commission.objects.filter(sales_rep=rep, workspace=request.workspace)
+
+        return Response(
+            {
+                "rep_id": str(rep.id),
+                "name": rep.name,
+                "email": rep.email,
+                "phone": rep.phone,
+                "tier": rep.tier,
+                "referral_code": rep.referral_code,
+                "commission_type": rep.commission_type,
+                "commission_rate": str(rep.commission_rate),
+                "bank_name": rep.bank_name,
+                "bank_account_number": rep.bank_account_number,
+                "bank_account_name": rep.bank_account_name,
+                "total_earned": str(
+                    comms.filter(status="PAID").aggregate(t=Sum("amount"))["t"] or 0
+                ),
+                "total_pending": str(
+                    comms.filter(status="PENDING").aggregate(t=Sum("amount"))["t"] or 0
+                ),
+                "total_commissions": comms.count(),
+                "total_referrals": comms.values("payment__installment__subscription").distinct().count(),
+            }
+        )
+
+
+class MyRepCommissionsView(APIView):
+    """GET /api/v1/commissions/my-commissions/ — paginated commissions for the authenticated sales rep"""
+
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(tags=_COMM_TAG)
+    def get(self, request):
+        try:
+            rep = SalesRep.objects.get(
+                email=request.user.email,
+                workspace=request.workspace,
+            )
+        except SalesRep.DoesNotExist:
+            return Response(
+                {"detail": "Not a sales rep in this workspace."},
+                status=404,
+            )
+
+        comms = (
+            Commission.objects.filter(sales_rep=rep, workspace=request.workspace)
+            .select_related("payment__installment__subscription__property")
+            .order_by("-created_at")
+        )
+
+        # Simple pagination
+        try:
+            page = max(1, int(request.query_params.get("page", 1)))
+            page_size = min(100, max(1, int(request.query_params.get("page_size", 20))))
+        except (TypeError, ValueError):
+            page, page_size = 1, 20
+
+        total = comms.count()
+        start = (page - 1) * page_size
+        end = start + page_size
+        page_qs = comms[start:end]
+
+        results = []
+        for c in page_qs:
+            try:
+                property_name = c.payment.installment.subscription.property.name
+            except Exception:
+                property_name = "—"
+            results.append(
+                {
+                    "id": str(c.id),
+                    "property_name": property_name,
+                    "amount": str(c.amount),
+                    "status": c.status,
+                    "paid_date": c.paid_date,
+                    "created_at": c.created_at.isoformat(),
+                }
+            )
+
+        return Response(
+            {
+                "count": total,
+                "page": page,
+                "page_size": page_size,
+                "page_count": max(1, -(-total // page_size)),  # ceiling division
+                "results": results,
+            }
+        )
+
+
 class CommissionMarkPaidView(APIView):
     """
     POST /api/v1/commissions/<id>/mark-paid/

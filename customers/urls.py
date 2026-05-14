@@ -18,6 +18,14 @@ from customers.site_inspection_views import (
     SiteInspectionDetailView,
 )
 from customers.bulk_upload_views import CustomerBulkUploadView, CustomerBulkTemplateView
+from customers.bulk_upload_extra_views import (
+    SiteInspectionBulkUploadView,
+    SiteInspectionBulkTemplateView,
+    SubscriptionBulkUploadView,
+    SubscriptionBulkTemplateView,
+    InstallmentBulkUploadView,
+    InstallmentBulkTemplateView,
+)
 
 app_name = "customers"
 
@@ -40,7 +48,19 @@ urlpatterns = [
     path("site-inspections/", SiteInspectionListCreateView.as_view(), name="site-inspection-list"),
     path("site-inspections/<uuid:id>/", SiteInspectionDetailView.as_view(), name="site-inspection-detail"),
 
-    # Bulk upload
+    # Bulk upload — Customers
     path("bulk-upload/", CustomerBulkUploadView.as_view(), name="customer-bulk-upload"),
     path("bulk-upload/template/", CustomerBulkTemplateView.as_view(), name="customer-bulk-template"),
+
+    # Bulk upload — Site Inspections
+    path("inspections/bulk-upload/", SiteInspectionBulkUploadView.as_view(), name="inspection-bulk-upload"),
+    path("inspections/bulk-upload/template/", SiteInspectionBulkTemplateView.as_view(), name="inspection-bulk-template"),
+
+    # Bulk upload — Subscriptions
+    path("subscriptions/bulk-upload/", SubscriptionBulkUploadView.as_view(), name="subscription-bulk-upload"),
+    path("subscriptions/bulk-upload/template/", SubscriptionBulkTemplateView.as_view(), name="subscription-bulk-template"),
+
+    # Bulk upload — Installments
+    path("installments/bulk-upload/", InstallmentBulkUploadView.as_view(), name="installment-bulk-upload"),
+    path("installments/bulk-upload/template/", InstallmentBulkTemplateView.as_view(), name="installment-bulk-template"),
 ]

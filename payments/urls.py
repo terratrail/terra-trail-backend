@@ -12,6 +12,7 @@ from payments.views import (
     RejectPaymentView,
     ResolveAccountView,
 )
+from payments.bulk_upload_views import PaymentBulkUploadView, PaymentBulkTemplateView
 
 app_name = "payments"
 
@@ -23,4 +24,8 @@ urlpatterns = [
     path("<uuid:id>/reject/", RejectPaymentView.as_view(), name="payment-reject"),
     path("verify-account/", ResolveAccountView.as_view(), name="verify-account"),
     path("banks/", PaystackBanksListView.as_view(), name="banks-list"),
+
+    # Bulk upload
+    path("bulk-upload/", PaymentBulkUploadView.as_view(), name="payment-bulk-upload"),
+    path("bulk-upload/template/", PaymentBulkTemplateView.as_view(), name="payment-bulk-template"),
 ]

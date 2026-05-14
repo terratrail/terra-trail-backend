@@ -56,10 +56,10 @@ def send_email_task(self, log_id, subject, message, recipient, html_message=None
             sent_at=timezone.now(),
             error_message="",
         )
-        logger.info(f"[EMAIL SENT] → {recipient} (log {log_id})")
+        logger.info(f"[EMAIL SENT] -> {recipient} (log {log_id})")
     except Exception as exc:
         err = str(exc)
-        logger.error(f"[EMAIL FAILED] → {recipient}: {err}")
+        logger.error(f"[EMAIL FAILED] -> {recipient}: {err}")
         NotificationLog.objects.filter(pk=log_id).update(
             status=NotificationLog.Status.FAILED,
             error_message=err,
