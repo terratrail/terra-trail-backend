@@ -10,6 +10,7 @@ payment spread methods:
 """
 
 from decimal import Decimal
+from django.conf import settings
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 
@@ -61,6 +62,16 @@ class Property(WorkspaceScopedModel):
     available_units = models.PositiveIntegerField(
         default=0,
         help_text="Number of plots/units available for sale",
+    )
+
+    # Customer rep assignment
+    assigned_customer_rep = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="assigned_properties",
+        help_text="Customer-facing representative assigned to this property.",
     )
 
     # Commission overrides per tier — null means use workspace default
@@ -417,6 +428,7 @@ class InspectionConfig(WorkspaceScopedModel):
     """
     Per-property inspection configuration set by workspace admin.
     Defines meeting points, available days/times, and capacity for site visits.
+    Multiple configs per property are supported (ForeignKey).
     """
 
     DAYS = [
@@ -424,16 +436,29 @@ class InspectionConfig(WorkspaceScopedModel):
         ("THU", "Thursday"), ("FRI", "Friday"), ("SAT", "Saturday"), ("SUN", "Sunday"),
     ]
 
-    property = models.OneToOneField(
+    class ScheduleMode(models.TextChoices):
+        RECURRING = "RECURRING", "Recurring"
+        ONE_TIME = "ONE_TIME", "One-Time"
+
+    property = models.ForeignKey(
         Property,
         on_delete=models.CASCADE,
-        related_name="inspection_config",
+        related_name="inspection_configs",
+    )
+    schedule_mode = models.CharField(
+        max_length=20,
+        choices=ScheduleMode.choices,
+        default=ScheduleMode.RECURRING,
+    )
+    tag = models.CharField(
+        max_length=100, blank=True, default="",
+        help_text="e.g. VIP, Group Tour, Standard",
     )
     meeting_point = models.CharField(max_length=500, blank=True, default="")
     virtual_link = models.URLField(max_length=500, blank=True, default="")
     available_days = models.JSONField(
         default=list,
-        help_text='e.g. ["MON","WED","FRI"]',
+        help_text='e.g. ["MON","WED","FRI"] — used for RECURRING configs',
     )
     time_from = models.TimeField(null=True, blank=True)
     time_to = models.TimeField(null=True, blank=True)
@@ -441,9 +466,22 @@ class InspectionConfig(WorkspaceScopedModel):
         default=list,
         help_text='[{id, label, start_time, mode: RECURRING|ONE_TIME, date, is_active}]',
     )
+    end_date = models.DateField(
+        null=True, blank=True,
+        help_text="For RECURRING configs — when the schedule stops.",
+    )
+    inspection_date = models.DateField(
+        null=True, blank=True,
+        help_text="For ONE_TIME configs — the specific inspection date.",
+    )
+    inspection_time = models.TimeField(
+        null=True, blank=True,
+        help_text="For ONE_TIME configs — the specific inspection time.",
+    )
     is_active = models.BooleanField(default=True, help_text="Whether this inspection schedule is open for bookings")
     max_persons = models.PositiveSmallIntegerField(default=5)
     notes = models.TextField(blank=True, default="")
+    additional_notes = models.TextField(blank=True, default="", help_text="Internal notes field")
 
     class Meta:
         verbose_name = "Inspection Configuration"
@@ -452,7 +490,7 @@ class InspectionConfig(WorkspaceScopedModel):
         ]
 
     def __str__(self):
-        return f"Inspection config for {self.property.name}"
+        return f"Inspection config ({self.schedule_mode}) for {self.property.name}"
 
 
 class PropertyAppreciation(WorkspaceScopedModel):

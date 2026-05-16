@@ -23,11 +23,34 @@ class SiteInspection(WorkspaceScopedModel):
         PENDING = "PENDING", "Pending"
         ATTENDED = "ATTENDED", "Attended"
         CANCELLED = "CANCELLED", "Cancelled"
+        NO_SHOW = "NO_SHOW", "No Show"
+
+    class Gender(models.TextChoices):
+        MALE = "MALE", "Male"
+        FEMALE = "FEMALE", "Female"
+        PREFER_NOT_TO_SAY = "PREFER_NOT_TO_SAY", "Prefer not to say"
+
+    class CustomerType(models.TextChoices):
+        EXISTING = "EXISTING", "Existing Customer"
+        NEW = "NEW", "New Customer"
 
     # Contact info
     name = models.CharField(max_length=255)
     email = models.EmailField()
     phone = models.CharField(max_length=20)
+    gender = models.CharField(
+        max_length=20,
+        choices=Gender.choices,
+        blank=True,
+        default="",
+    )
+    customer_type = models.CharField(
+        max_length=20,
+        choices=CustomerType.choices,
+        blank=True,
+        default="",
+        help_text="Auto-set on creation: EXISTING if email matches a customer, else NEW.",
+    )
 
     # Property (optional FK — can be free-text if property not yet listed)
     linked_property = models.ForeignKey(

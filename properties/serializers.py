@@ -259,6 +259,7 @@ class PropertyListSerializer(serializers.ModelSerializer):
     price_from = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True, allow_null=True)
     land_sizes = LandSizeSerializer(many=True, read_only=True)
     min_pricing_plan = serializers.SerializerMethodField()
+    assigned_customer_rep_name = serializers.SerializerMethodField()
 
     def get_min_pricing_plan(self, obj):
         plans = obj.pricing_plans.all()
@@ -266,6 +267,11 @@ class PropertyListSerializer(serializers.ModelSerializer):
             return None
         cheapest = min(plans, key=lambda p: p.total_price)
         return {"id": str(cheapest.id), "plan_name": cheapest.plan_name, "total_price": str(cheapest.total_price)}
+
+    def get_assigned_customer_rep_name(self, obj):
+        if not obj.assigned_customer_rep:
+            return None
+        return obj.assigned_customer_rep.get_full_name() or obj.assigned_customer_rep.email
 
     class Meta:
         model = Property
@@ -285,10 +291,12 @@ class PropertyListSerializer(serializers.ModelSerializer):
             "subscription_count",
             "price_from",
             "min_pricing_plan",
+            "assigned_customer_rep",
+            "assigned_customer_rep_name",
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "created_at", "updated_at"]
+        read_only_fields = ["id", "assigned_customer_rep_name", "created_at", "updated_at"]
 
 
 class PropertyDetailSerializer(serializers.ModelSerializer):
@@ -302,6 +310,12 @@ class PropertyDetailSerializer(serializers.ModelSerializer):
     gallery_images = PropertyGallerySerializer(many=True, read_only=True)
     land_sizes = LandSizeSerializer(many=True, read_only=True)
     commission_defaults = serializers.SerializerMethodField()
+    assigned_customer_rep_name = serializers.SerializerMethodField()
+
+    def get_assigned_customer_rep_name(self, obj):
+        if not obj.assigned_customer_rep:
+            return None
+        return obj.assigned_customer_rep.get_full_name() or obj.assigned_customer_rep.email
 
     class Meta:
         model = Property
@@ -330,12 +344,16 @@ class PropertyDetailSerializer(serializers.ModelSerializer):
             "commission_override_legend",
             # Workspace defaults shown alongside for context
             "commission_defaults",
+            # Customer rep
+            "assigned_customer_rep",
+            "assigned_customer_rep_name",
             "created_at",
             "updated_at",
         ]
         read_only_fields = [
             "id",
             "commission_defaults",
+            "assigned_customer_rep_name",
             "created_at",
             "updated_at",
         ]
@@ -589,10 +607,13 @@ class InspectionConfigSerializer(serializers.ModelSerializer):
     class Meta:
         model = InspectionConfig
         fields = [
-            "id", "property", "meeting_point", "virtual_link",
+            "id", "property",
+            "schedule_mode", "tag",
+            "meeting_point", "virtual_link",
             "available_days", "time_from", "time_to",
             "time_slots", "is_active",
-            "max_persons", "notes",
+            "end_date", "inspection_date", "inspection_time",
+            "max_persons", "notes", "additional_notes",
             "created_at", "updated_at",
         ]
         read_only_fields = ["id", "created_at", "updated_at"]

@@ -4,9 +4,12 @@ Properties URL configuration.
 
 from django.urls import path
 from properties.views import (
+    AssignCustomerRepView,
     BankAccountDetailView,
     BankAccountListCreateView,
     InspectionConfigView,
+    InspectionConfigListCreateView,
+    InspectionConfigDetailView,
     PricingPlanActivateView,
     PricingPlanDeactivateView,
     PricingPlanDetailView,
@@ -16,6 +19,7 @@ from properties.views import (
     PropertyAmenityListCreateView,
     PropertyAppreciationDetailView,
     PropertyAppreciationListCreateView,
+    PropertyAvailableSlotsView,
     PropertyDetailView,
     PropertyDocumentDetailView,
     PropertyDocumentListCreateView,
@@ -35,6 +39,7 @@ urlpatterns = [
     path("<uuid:id>/", PropertyDetailView.as_view(), name="property-detail"),
     path("<uuid:id>/publish/",   PropertyPublishView.as_view(),   name="property-publish"),
     path("<uuid:id>/unpublish/", PropertyUnpublishView.as_view(), name="property-unpublish"),
+    path("<uuid:id>/assign-customer-rep/", AssignCustomerRepView.as_view(), name="property-assign-rep"),
 
     # Pricing Plans  (?property_id=<uuid> to filter)
     path("plans/", PricingPlanListCreateView.as_view(), name="plan-list-create"),
@@ -63,8 +68,15 @@ urlpatterns = [
     path("bulk-upload/", PropertyBulkUploadView.as_view(), name="property-bulk-upload"),
     path("bulk-upload/template/", PropertyBulkTemplateView.as_view(), name="property-bulk-template"),
 
-    # Inspection Config (per property)
+    # Inspection Config — legacy single-config endpoint
     path("<uuid:id>/inspection-config/", InspectionConfigView.as_view(), name="inspection-config"),
+
+    # Inspection Configs — multi-config endpoints
+    path("<uuid:id>/inspection-configs/", InspectionConfigListCreateView.as_view(), name="inspection-configs-list-create"),
+    path("<uuid:id>/inspection-configs/<uuid:config_id>/", InspectionConfigDetailView.as_view(), name="inspection-config-detail"),
+
+    # Available slots
+    path("<uuid:id>/available-slots/", PropertyAvailableSlotsView.as_view(), name="available-slots"),
 
     # Appreciation records
     path("<uuid:id>/appreciations/", PropertyAppreciationListCreateView.as_view(), name="appreciation-list-create"),

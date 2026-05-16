@@ -40,6 +40,8 @@ class PaymentService:
         if installment.status == Installment.Status.PENDING:
             raise ValueError("A payment is already pending for this installment.")
 
+        # Allow recording a new payment on a PARTIALLY_PAID installment
+
         payment = Payment.objects.create(
             workspace=workspace,
             installment=installment,
@@ -80,13 +82,50 @@ class PaymentService:
         payment.approved_by = approved_by
         payment.save(update_fields=["status", "approved_by", "updated_at"])
 
-        # 2. Mark installment as PAID
+        # 2. Apply payment to installment — handle under/overpayment
         installment = payment.installment
-        installment.status = Installment.Status.PAID
-        installment.paid_date = date.today()
-        installment.save(update_fields=["status", "paid_date", "updated_at"])
+        installment_due = installment.amount
+        already_paid = installment.amount_paid
+        total_paid_now = already_paid + payment.amount
 
-        # 3. Update subscription
+        if total_paid_now < installment_due:
+            # Underpayment: partially paid
+            installment.amount_paid = total_paid_now
+            installment.status = Installment.Status.PARTIALLY_PAID
+            installment.save(update_fields=["amount_paid", "status", "updated_at"])
+        else:
+            # Full or overpayment
+            installment.amount_paid = installment_due  # cap at due amount
+            installment.status = Installment.Status.PAID
+            installment.paid_date = payment.payment_date or date.today()
+            installment.save(update_fields=["amount_paid", "status", "paid_date", "updated_at"])
+
+            # Handle overpayment: apply excess to subsequent installments in order
+            excess = total_paid_now - installment_due
+            if excess > 0:
+                future_installments = Installment.objects.filter(
+                    subscription=installment.subscription,
+                    installment_number__gt=installment.installment_number,
+                ).exclude(
+                    status=Installment.Status.PAID,
+                ).order_by("installment_number")
+
+                for future_inst in future_installments:
+                    if excess <= Decimal("0.00"):
+                        break
+                    remaining_on_inst = future_inst.amount - future_inst.amount_paid
+                    if excess >= remaining_on_inst:
+                        excess -= remaining_on_inst
+                        future_inst.amount_paid = future_inst.amount
+                        future_inst.status = Installment.Status.PAID
+                        future_inst.paid_date = payment.payment_date or date.today()
+                    else:
+                        future_inst.amount_paid += excess
+                        future_inst.status = Installment.Status.PARTIALLY_PAID
+                        excess = Decimal("0.00")
+                    future_inst.save(update_fields=["amount_paid", "status", "paid_date", "updated_at"])
+
+        # 3. Update subscription totals
         subscription = installment.subscription
         subscription.amount_paid += payment.amount
         subscription.balance = subscription.total_price - subscription.amount_paid
@@ -97,23 +136,26 @@ class PaymentService:
             subscription.status = Subscription.Status.ACTIVE
         subscription.save(update_fields=["amount_paid", "balance", "status", "updated_at"])
 
-        # 4. If this was the initial payment (installment #1), recalculate all
-        #    future due dates anchored to today's approval date (PRD 5.3.2).
-        if installment.installment_number == 1:
-            try:
-                from customers.services import SubscriptionService
-                SubscriptionService.regenerate_schedule(
-                    subscription=subscription,
-                    new_start_date=date.today(),
-                )
-            except Exception as e:
-                logger.error(
-                    f"Schedule regeneration failed for subscription "
-                    f"{subscription.id}: {e}"
-                )
-        else:
-            # 4b. For subsequent payments, just activate the next installment.
-            PaymentService._activate_next_installment(subscription)
+        # 4. Activate next installments only when the current installment is FULLY paid.
+        #    For underpayments (PARTIALLY_PAID) the installment is still open — skip.
+        installment_fully_paid = (installment.status == Installment.Status.PAID)
+        if installment_fully_paid:
+            if installment.installment_number == 1:
+                # Recalculate all future due dates anchored to today (PRD 5.3.2).
+                try:
+                    from customers.services import SubscriptionService
+                    SubscriptionService.regenerate_schedule(
+                        subscription=subscription,
+                        new_start_date=date.today(),
+                    )
+                except Exception as e:
+                    logger.error(
+                        f"Schedule regeneration failed for subscription "
+                        f"{subscription.id}: {e}"
+                    )
+            else:
+                # For subsequent payments, activate the next UPCOMING installment.
+                PaymentService._activate_next_installment(subscription)
 
         # 5 & 6. Trigger commission + notification after the transaction commits.
         # Using on_commit ensures these side effects only run if the DB write

@@ -517,10 +517,10 @@ class PublicPropertyDetailView(APIView):
 # Inspection Config endpoints
 # ---------------------------------------------------------------------------
 
-class InspectionConfigView(APIView):
+class InspectionConfigListCreateView(APIView):
     """
-    GET  /api/v1/properties/<id>/inspection-config/  — Get config (or 404)
-    POST /api/v1/properties/<id>/inspection-config/  — Create or update config
+    GET  /api/v1/properties/<id>/inspection-configs/  — List all configs for property
+    POST /api/v1/properties/<id>/inspection-configs/  — Create a new config
     """
     permission_classes = [IsAuthenticated, IsWorkspaceAdmin]
 
@@ -532,32 +532,256 @@ class InspectionConfigView(APIView):
         from properties.models import InspectionConfig
         from properties.serializers import InspectionConfigSerializer
         prop = self._get_property(request, id)
+        configs = InspectionConfig.objects.filter(workspace=request.workspace, property=prop).order_by("-created_at")
+        return Response(InspectionConfigSerializer(configs, many=True, context={"request": request}).data)
+
+    def post(self, request, id):
+        from properties.serializers import InspectionConfigSerializer
+        prop = self._get_property(request, id)
+        data = {**request.data, "property": str(prop.id)}
+        serializer = InspectionConfigSerializer(data=data, context={"request": request})
+        if serializer.is_valid():
+            serializer.save(workspace=request.workspace, property=prop)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class InspectionConfigDetailView(APIView):
+    """
+    GET    /api/v1/properties/<id>/inspection-configs/<config_id>/  — Retrieve
+    PATCH  /api/v1/properties/<id>/inspection-configs/<config_id>/  — Update
+    DELETE /api/v1/properties/<id>/inspection-configs/<config_id>/  — Delete
+    """
+    permission_classes = [IsAuthenticated, IsWorkspaceAdmin]
+
+    def _get_config(self, request, id, config_id):
+        from properties.models import InspectionConfig
         try:
-            config = prop.inspection_config
+            return InspectionConfig.objects.get(id=config_id, property_id=id, workspace=request.workspace)
         except InspectionConfig.DoesNotExist:
+            return None
+
+    def get(self, request, id, config_id):
+        from properties.serializers import InspectionConfigSerializer
+        config = self._get_config(request, id, config_id)
+        if config is None:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        return Response(InspectionConfigSerializer(config, context={"request": request}).data)
+
+    def patch(self, request, id, config_id):
+        from properties.serializers import InspectionConfigSerializer
+        config = self._get_config(request, id, config_id)
+        if config is None:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        serializer = InspectionConfigSerializer(config, data=request.data, partial=True, context={"request": request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, id, config_id):
+        config = self._get_config(request, id, config_id)
+        if config is None:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        config.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# Keep the old single-config view as a compatibility shim (GET/POST → first config or create)
+class InspectionConfigView(APIView):
+    """
+    GET  /api/v1/properties/<id>/inspection-config/  — Get first active config (legacy)
+    POST /api/v1/properties/<id>/inspection-config/  — Create a config (legacy)
+    """
+    permission_classes = [IsAuthenticated, IsWorkspaceAdmin]
+
+    def _get_property(self, request, id):
+        from django.shortcuts import get_object_or_404
+        return get_object_or_404(Property, id=id, workspace=request.workspace)
+
+    def get(self, request, id):
+        from properties.models import InspectionConfig
+        from properties.serializers import InspectionConfigSerializer
+        prop = self._get_property(request, id)
+        config = InspectionConfig.objects.filter(workspace=request.workspace, property=prop).order_by("-created_at").first()
+        if config is None:
             return Response({}, status=status.HTTP_200_OK)
         return Response(InspectionConfigSerializer(config, context={"request": request}).data)
 
     def post(self, request, id):
-        from properties.models import InspectionConfig
         from properties.serializers import InspectionConfigSerializer
         prop = self._get_property(request, id)
-        try:
-            config = prop.inspection_config
-            serializer = InspectionConfigSerializer(config, data=request.data, partial=True, context={"request": request})
-        except InspectionConfig.DoesNotExist:
-            data = {**request.data, "property": str(prop.id)}
-            serializer = InspectionConfigSerializer(data=data, context={"request": request})
+        data = {**request.data, "property": str(prop.id)}
+        serializer = InspectionConfigSerializer(data=data, context={"request": request})
         if serializer.is_valid():
             serializer.save(workspace=request.workspace, property=prop)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class PropertyAvailableSlotsView(APIView):
+    """
+    GET /api/v1/properties/<id>/available-slots/?months=3
+
+    Returns all available inspection slots for a property across its active
+    InspectionConfigs, for the next `months` months.
+
+    Response items:
+        { date, time, label, config_id, mode, tag, slot_id }
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, id):
+        import uuid as _uuid
+        from datetime import date, timedelta
+        from dateutil.relativedelta import relativedelta
+        from properties.models import InspectionConfig
+        from customers.site_inspection_models import SiteInspection
+
+        try:
+            prop = Property.objects.get(id=id, workspace=request.workspace)
+        except Property.DoesNotExist:
+            return Response({"detail": "Property not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            months = max(1, int(request.query_params.get("months", 3)))
+        except (ValueError, TypeError):
+            months = 3
+
+        today = date.today()
+        end_bound = today + relativedelta(months=months)
+
+        configs = InspectionConfig.objects.filter(
+            workspace=request.workspace,
+            property=prop,
+            is_active=True,
+        )
+
+        # Day-name → weekday index (Monday=0)
+        DAY_MAP = {
+            "MON": 0, "TUE": 1, "WED": 2,
+            "THU": 3, "FRI": 4, "SAT": 5, "SUN": 6,
+        }
+
+        # Count booked slots per (property, date, time) for capacity checks
+        booked_counts: dict = {}
+        for insp in SiteInspection.objects.filter(
+            workspace=request.workspace,
+            linked_property=prop,
+            inspection_date__gte=today,
+            inspection_date__lte=end_bound,
+            status__in=["PENDING", "ATTENDED"],
+        ).values("inspection_date", "inspection_time"):
+            key = (str(insp["inspection_date"]), str(insp["inspection_time"]) if insp["inspection_time"] else "")
+            booked_counts[key] = booked_counts.get(key, 0) + 1
+
+        slots = []
+
+        for config in configs:
+            if config.schedule_mode == "ONE_TIME":
+                if not config.inspection_date or config.inspection_date < today:
+                    continue
+                if config.inspection_date > end_bound:
+                    continue
+                t = config.inspection_time
+                time_str = t.strftime("%H:%M") if t else ""
+                key = (str(config.inspection_date), time_str)
+                if booked_counts.get(key, 0) >= config.max_persons:
+                    continue
+                label = _format_slot_label(config.inspection_date, t)
+                slots.append({
+                    "date": str(config.inspection_date),
+                    "time": time_str,
+                    "label": label,
+                    "config_id": str(config.id),
+                    "mode": "ONE_TIME",
+                    "tag": config.tag,
+                    "slot_id": str(_uuid.uuid4()),
+                })
+
+            else:  # RECURRING
+                available_days = config.available_days or []
+                if not available_days:
+                    continue
+
+                # Determine times to generate slots for
+                slot_times = []
+                if config.time_slots:
+                    for ts in config.time_slots:
+                        if ts.get("is_active", True):
+                            slot_times.append(ts.get("start_time") or ts.get("time", ""))
+                elif config.time_from:
+                    slot_times.append(config.time_from.strftime("%H:%M"))
+
+                if not slot_times:
+                    slot_times = [""]
+
+                # Collect target weekday indices
+                target_weekdays = set()
+                for day_code in available_days:
+                    idx = DAY_MAP.get(day_code.upper())
+                    if idx is not None:
+                        target_weekdays.add(idx)
+
+                # Recurring end boundary
+                recur_end = end_bound
+                if config.end_date and config.end_date < recur_end:
+                    recur_end = config.end_date
+
+                # Walk day-by-day from tomorrow
+                current = today + timedelta(days=1)
+                while current <= recur_end:
+                    if current.weekday() in target_weekdays:
+                        for time_str in slot_times:
+                            key = (str(current), time_str)
+                            if booked_counts.get(key, 0) >= config.max_persons:
+                                current += timedelta(days=1)
+                                continue
+                            # Parse time_str for label
+                            t_obj = _parse_time(time_str)
+                            label = _format_slot_label(current, t_obj)
+                            slots.append({
+                                "date": str(current),
+                                "time": time_str,
+                                "label": label,
+                                "config_id": str(config.id),
+                                "mode": "RECURRING",
+                                "tag": config.tag,
+                                "slot_id": str(_uuid.uuid4()),
+                            })
+                    current += timedelta(days=1)
+
+        # Sort by date then time
+        slots.sort(key=lambda s: (s["date"], s["time"]))
+        return Response(slots)
+
+
+def _parse_time(time_str):
+    """Parse a HH:MM string to a time object, returning None on failure."""
+    if not time_str:
+        return None
+    try:
+        from datetime import time as dt_time
+        parts = time_str.split(":")
+        return dt_time(int(parts[0]), int(parts[1]))
+    except Exception:
+        return None
+
+
+def _format_slot_label(d, t):
+    """Format date + time as 'Fri, 15 May 2026, 10:00am'."""
+    date_part = d.strftime("%a, %d %b %Y")
+    if t:
+        # Use %I (zero-padded 12h) then strip leading zero manually for cross-platform
+        time_part = t.strftime("%I:%M%p").lstrip("0").lower()
+        return f"{date_part}, {time_part}"
+    return date_part
 
 
 class PublicInspectionConfigView(APIView):
     """
     GET /api/v1/public/<workspace_slug>/properties/<id>/inspection-config/
-    Public — no auth required.
+    Public — no auth required. Returns all active configs.
     """
     permission_classes = []
 
@@ -573,11 +797,8 @@ class PublicInspectionConfigView(APIView):
             prop = Property.objects.get(id=id, workspace=workspace, status="PUBLISHED")
         except Property.DoesNotExist:
             return Response({"detail": "Property not found."}, status=status.HTTP_404_NOT_FOUND)
-        try:
-            config = prop.inspection_config
-            return Response(InspectionConfigSerializer(config, context={"request": request}).data)
-        except InspectionConfig.DoesNotExist:
-            return Response({}, status=status.HTTP_200_OK)
+        configs = InspectionConfig.objects.filter(workspace=workspace, property=prop, is_active=True).order_by("-created_at")
+        return Response(InspectionConfigSerializer(configs, many=True, context={"request": request}).data)
 
 
 # ---------------------------------------------------------------------------
@@ -626,6 +847,51 @@ class PropertyAppreciationDetailView(APIView):
             return Response(status=status.HTTP_204_NO_CONTENT)
         except PropertyAppreciation.DoesNotExist:
             return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+
+
+class AssignCustomerRepView(APIView):
+    """
+    PATCH /api/v1/properties/<id>/assign-customer-rep/
+
+    Assigns a workspace member as the customer representative for a property.
+    Request body: { "user_id": "<uuid>" }
+    """
+    permission_classes = [IsAuthenticated, IsWorkspaceAdmin]
+
+    @swagger_auto_schema(
+        tags=_PROP_TAG,
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=["user_id"],
+            properties={
+                "user_id": openapi.Schema(type=openapi.TYPE_STRING, format="uuid"),
+            },
+        ),
+        responses={200: PropertyDetailSerializer},
+    )
+    def patch(self, request, id):
+        from accounts.models import User
+        try:
+            prop = Property.objects.get(id=id, workspace=request.workspace)
+        except Property.DoesNotExist:
+            return Response({"detail": "Property not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        user_id = request.data.get("user_id")
+        if not user_id:
+            return Response({"detail": "user_id is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user = User.objects.get(id=user_id, workspace_memberships__workspace=request.workspace)
+        except User.DoesNotExist:
+            return Response(
+                {"detail": "User not found or is not a member of this workspace."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        prop.assigned_customer_rep = user
+        prop.save(update_fields=["assigned_customer_rep", "updated_at"])
+
+        return Response(PropertyDetailSerializer(prop, context={"request": request}).data)
 
 
 class PublicPropertyAppreciationView(APIView):
@@ -728,7 +994,20 @@ class PublicSiteInspectionCreateView(APIView):
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        inspection = serializer.save(workspace=workspace, linked_property=prop, property_name=prop.name)
+        # Auto-detect customer_type
+        email = serializer.validated_data.get("email", "")
+        customer_type = serializer.validated_data.get("customer_type", "")
+        if not customer_type and email:
+            from customers.models import Customer
+            exists = Customer.objects.filter(workspace=workspace, email__iexact=email).exists()
+            customer_type = "EXISTING" if exists else "NEW"
+
+        inspection = serializer.save(
+            workspace=workspace,
+            linked_property=prop,
+            property_name=prop.name,
+            customer_type=customer_type,
+        )
 
         try:
             NotificationService.send_inspection_booking_email(inspection, workspace)

@@ -20,6 +20,8 @@ class SiteInspectionSerializer(serializers.ModelSerializer):
             "name",
             "email",
             "phone",
+            "gender",
+            "customer_type",
             "linked_property",
             "property_name",
             "property_display",
@@ -70,6 +72,8 @@ class SiteInspectionCreateSerializer(serializers.ModelSerializer):
             "name",
             "email",
             "phone",
+            "gender",
+            "customer_type",
             "linked_property",
             "property_name",
             "inspection_date",
@@ -80,3 +84,7 @@ class SiteInspectionCreateSerializer(serializers.ModelSerializer):
             "attendees",
             "notes",
         ]
+        extra_kwargs = {
+            "customer_type": {"required": False},
+            "gender": {"required": False},
+        }

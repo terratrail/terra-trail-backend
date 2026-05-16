@@ -55,7 +55,18 @@ class SiteInspectionListCreateView(generics.ListCreateAPIView):
         return super().post(request, *args, **kwargs)
 
     def perform_create(self, serializer):
-        serializer.save(workspace=self.request.workspace)
+        # Auto-detect customer_type based on whether the email already exists
+        # as a Customer in this workspace.
+        email = serializer.validated_data.get("email", "")
+        customer_type = serializer.validated_data.get("customer_type", "")
+        if not customer_type and email:
+            from customers.models import Customer
+            exists = Customer.objects.filter(
+                workspace=self.request.workspace,
+                email__iexact=email,
+            ).exists()
+            customer_type = "EXISTING" if exists else "NEW"
+        serializer.save(workspace=self.request.workspace, customer_type=customer_type)
 
 
 class SiteInspectionDetailView(generics.RetrieveUpdateDestroyAPIView):

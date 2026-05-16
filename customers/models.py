@@ -168,6 +168,7 @@ class Installment(WorkspaceScopedModel):
         DUE = "DUE", "Due"
         OVERDUE = "OVERDUE", "Overdue"
         PENDING = "PENDING", "Pending"
+        PARTIALLY_PAID = "PARTIALLY_PAID", "Partially Paid"
         PAID = "PAID", "Paid"
 
     subscription = models.ForeignKey(
@@ -180,6 +181,10 @@ class Installment(WorkspaceScopedModel):
     amount = models.DecimalField(
         max_digits=14, decimal_places=2,
         validators=[MinValueValidator(Decimal("0.01"))],
+    )
+    amount_paid = models.DecimalField(
+        max_digits=14, decimal_places=2, default=Decimal("0.00"),
+        help_text="Tracks how much has been paid toward this installment so far.",
     )
     status = models.CharField(
         max_length=20,
