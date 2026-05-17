@@ -21,7 +21,7 @@ DEBUG = config("DEBUG", default=False, cast=bool)
 
 ALLOWED_HOSTS = config(
     "ALLOWED_HOSTS",
-    default="localhost,127.0.0.1,.localhost,.up.railway.app,terra-trail-backend.onrender.com,terratrail.app",
+    default="localhost,127.0.0.1,.localhost,.up.railway.app,terra-trail-backend.onrender.com,terratrail.app,healthcheck.railway.app,api.terratrail.app",
     cast=Csv(),
 )
 
@@ -286,6 +286,7 @@ CORS_ALLOWED_ORIGINS = config(
         "https://terra-trail.vercel.app,"
         "https://terratrail.app,"
         "https://www.terratrail.app,"
+        "https://api.terratrail.app,"
     ),
     cast=Csv(),
 )
@@ -315,7 +316,7 @@ DEFAULT_FROM_EMAIL = config(
 
 # Resend
 RESEND_API_KEY = config("RESEND_API_KEY", default="")
-MAIL_DOMAIN    = config("MAIL_DOMAIN", default="mail.terratrail.app")
+MAIL_DOMAIN = config("MAIL_DOMAIN", default="mail.terratrail.app")
 
 
 # ---------------------------------------------------------------------------
