@@ -10,9 +10,10 @@ CORS_ALLOW_ALL_ORIGINS = True
 # Print emails to console in dev — no SMTP server required.
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
-# Run Celery tasks synchronously in-process — no Redis/broker required in dev.
+# Run Celery tasks synchronously in-process in dev unless overridden via env.
 CELERY_TASK_ALWAYS_EAGER = True
 CELERY_TASK_EAGER_PROPAGATES = True
+
 
 # The browsable API renderer is useful during development.
 # Extend REST_FRAMEWORK in base.py by overriding DEFAULT_RENDERER_CLASSES
