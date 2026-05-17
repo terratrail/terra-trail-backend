@@ -13,7 +13,6 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     DJANGO_SUPERUSER_USERNAME=admin \
     DJANGO_SUPERUSER_EMAIL=demiladebamgboye@gmail.com \
     DJANGO_SUPERUSER_PASSWORD=password$123 \
-    DATABASE_URL=postgresql://terratrail:LVGwNqbTPPutjRsRDNdnSaLw9D8bdGiJ@dpg-d7gmvgq8qa3s73cm38o0-a.oregon-postgres.render.com/terratrail
 
 # Create and set the working directory
 WORKDIR /app

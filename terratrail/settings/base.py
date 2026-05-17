@@ -21,7 +21,7 @@ DEBUG = config("DEBUG", default=False, cast=bool)
 
 ALLOWED_HOSTS = config(
     "ALLOWED_HOSTS",
-    default="localhost,127.0.0.1,.localhost,terra-trail-backend.onrender.com,terratrail.app,https://terratrail.app",
+    default="localhost,127.0.0.1,.localhost,.up.railway.app,terra-trail-backend.onrender.com,terratrail.app",
     cast=Csv(),
 )
 
