@@ -64,6 +64,7 @@ DJANGO_APPS = [
 ]
 
 THIRD_PARTY_APPS = [
+    "anymail",
     "rest_framework",
     "rest_framework_simplejwt",
     "rest_framework_simplejwt.token_blacklist",
@@ -302,7 +303,7 @@ CORS_ALLOWED_ORIGINS = config(
 
 EMAIL_BACKEND = config(
     "EMAIL_BACKEND",
-    default="notifications.resend_backend.ResendEmailBackend",
+    default="django.core.mail.backends.console.EmailBackend",
 )
 EMAIL_HOST = config("EMAIL_HOST", default="")
 EMAIL_PORT = config("EMAIL_PORT", default=587, cast=int)

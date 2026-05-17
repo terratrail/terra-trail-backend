@@ -52,4 +52,4 @@ gunicorn==22.0.0
 whitenoise==6.6.0
 dj-database-url==2.1.0
 openpyxl==3.1.5
-resend>=2.0.0,<3.0.0
+django-anymail[resend]

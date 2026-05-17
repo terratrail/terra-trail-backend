@@ -58,14 +58,13 @@ DATABASES = {
 }
 
 # ---------------------------------------------------------------------------
-# Email — Resend (overrides base.py's decouple-based default)
+# Email — Resend via django-anymail
 # ---------------------------------------------------------------------------
 
-EMAIL_BACKEND = config(
-    "EMAIL_BACKEND",
-    default="notifications.resend_backend.ResendEmailBackend",
-)
-RESEND_API_KEY = config("RESEND_API_KEY", default="")
+EMAIL_BACKEND = "anymail.backends.resend.EmailBackend"
+ANYMAIL = {
+    "RESEND_API_KEY": config("RESEND_API_KEY", default=""),
+}
 MAIL_DOMAIN = config("MAIL_DOMAIN", default="mail.terratrail.app")
 
 # ---------------------------------------------------------------------------
