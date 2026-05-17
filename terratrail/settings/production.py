@@ -1,8 +1,12 @@
 """
 TerraTrail — Production settings.
 Optimised for Railway deployment.
+
+Can be loaded directly (DJANGO_SETTINGS_MODULE=terratrail.settings.production)
+or via the package __init__.py (DJANGO_SETTINGS_MODULE=terratrail.settings).
 """
 
+from .base import *  # noqa: F401,F403 — must come first; provides ROOT_URLCONF, INSTALLED_APPS, etc.
 from decouple import config
 import dj_database_url
 
