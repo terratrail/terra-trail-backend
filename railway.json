@@ -4,8 +4,9 @@
     "builder": "DOCKERFILE"
   },
   "deploy": {
-    "releaseCommand": "python manage.py migrate --noinput",
+    "releaseCommand": "python manage.py migrate --noinput && python manage.py createsuperuser --noinput || true",
     "healthcheckPath": "/api/v1/health/",
+    "healthcheckTimeout": 300,
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 3
   }

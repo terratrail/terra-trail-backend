@@ -37,11 +37,14 @@ _db_url = os.environ.get("DATABASE_URL") or config("DATABASE_URL", default=None)
 
 if not _db_url:
     import sys
-    sys.stderr.write("\n" + "="*50 + "\n")
+
+    sys.stderr.write("\n" + "=" * 50 + "\n")
     sys.stderr.write("CRITICAL: DATABASE_URL is not set!\n")
-    sys.stderr.write("On Railway: link a Postgres service or set DATABASE_URL in Variables.\n")
+    sys.stderr.write(
+        "On Railway: link a Postgres service or set DATABASE_URL in Variables.\n"
+    )
     sys.stderr.write(f"Available env keys: {', '.join(sorted(os.environ.keys()))}\n")
-    sys.stderr.write("="*50 + "\n")
+    sys.stderr.write("=" * 50 + "\n")
 
 DATABASES = {
     "default": dj_database_url.parse(
