@@ -9,10 +9,7 @@ FROM python:3.13-slim
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     DJANGO_SETTINGS_MODULE=terratrail.settings \
-    DEBUG=False \
-    DJANGO_SUPERUSER_USERNAME=admin \
-    DJANGO_SUPERUSER_EMAIL=demiladebamgboye@gmail.com \
-    DJANGO_SUPERUSER_PASSWORD=password$123 \
+    DEBUG=False
 
 # Create and set the working directory
 WORKDIR /app

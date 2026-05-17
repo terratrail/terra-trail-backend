@@ -19,10 +19,12 @@ python manage.py makemigrations --noinput
 echo "--- Running Migrations ---"
 python manage.py migrate --noinput
 
-echo "--- Creating Superuser ---"
-# This will use DJANGO_SUPERUSER_USERNAME, DJANGO_SUPERUSER_EMAIL, and DJANGO_SUPERUSER_PASSWORD
-# We catch the error in case the superuser already exists
-python manage.py createsuperuser --noinput || echo "Superuser creation failed or already exists"
+echo "--- Creating Superuser (if credentials provided) ---"
+if [ -n "$DJANGO_SUPERUSER_USERNAME" ] && [ -n "$DJANGO_SUPERUSER_EMAIL" ] && [ -n "$DJANGO_SUPERUSER_PASSWORD" ]; then
+  python manage.py createsuperuser --noinput || echo "Superuser already exists or creation skipped."
+else
+  echo "DJANGO_SUPERUSER_* env vars not set — skipping superuser creation."
+fi
 
 echo "--- Starting Gunicorn ---"
 # Default to port 8000 if PORT is not set
