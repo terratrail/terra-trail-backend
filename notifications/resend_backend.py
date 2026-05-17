@@ -1,7 +1,9 @@
 """
 Custom Django email backend that delivers via Resend REST API.
-Configure EMAIL_BACKEND = "notifications.resend_backend.ResendEmailBackend"
-and set RESEND_API_KEY in env.
+Configure:
+    EMAIL_BACKEND = "notifications.resend_backend.ResendEmailBackend"
+    RESEND_API_KEY = "re_..."
+    MAIL_DOMAIN = "mail.yourdomain.com"  (must be verified in Resend dashboard)
 """
 import logging
 import resend
@@ -16,8 +18,16 @@ class ResendEmailBackend(BaseEmailBackend):
     def close(self): pass
 
     def send_messages(self, email_messages):
-        resend.api_key = settings.RESEND_API_KEY
+        api_key = getattr(settings, "RESEND_API_KEY", "")
+        if not api_key:
+            logger.error("[RESEND] RESEND_API_KEY is not configured — emails will not be sent.")
+            if not self.fail_silently:
+                raise ValueError("RESEND_API_KEY is not set")
+            return 0
+
+        resend.api_key = api_key
         sent = 0
+
         for msg in email_messages:
             try:
                 html = None
@@ -26,18 +36,30 @@ class ResendEmailBackend(BaseEmailBackend):
                         if mime == "text/html":
                             html = content
                             break
+
+                # Resend requires `to` to be a list of strings
+                to_list = list(msg.to) if msg.to else []
+                if not to_list:
+                    logger.warning("[RESEND] Skipping message with no recipients.")
+                    continue
+
                 params = {
                     "from": msg.from_email,
-                    "to": msg.to,
+                    "to": to_list,
                     "subject": msg.subject,
-                    "text": msg.body,
+                    "text": msg.body or " ",
                 }
                 if html:
                     params["html"] = html
+
+                logger.info(f"[RESEND] Sending to {to_list} subject={msg.subject!r}")
                 resend.Emails.send(params)
                 sent += 1
+                logger.info(f"[RESEND] Sent OK to {to_list}")
+
             except Exception as e:
-                logger.error(f"[RESEND] Failed to send to {msg.to}: {e}")
+                logger.error(f"[RESEND] Failed to send to {msg.to}: {e}", exc_info=True)
                 if not self.fail_silently:
                     raise
+
         return sent

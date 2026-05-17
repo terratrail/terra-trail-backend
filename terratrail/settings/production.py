@@ -58,6 +58,17 @@ DATABASES = {
 }
 
 # ---------------------------------------------------------------------------
+# Email — Resend (overrides base.py's decouple-based default)
+# ---------------------------------------------------------------------------
+
+EMAIL_BACKEND = config(
+    "EMAIL_BACKEND",
+    default="notifications.resend_backend.ResendEmailBackend",
+)
+RESEND_API_KEY = config("RESEND_API_KEY", default="")
+MAIL_DOMAIN = config("MAIL_DOMAIN", default="mail.terratrail.app")
+
+# ---------------------------------------------------------------------------
 # Storage — S3
 # ---------------------------------------------------------------------------
 
