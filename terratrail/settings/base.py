@@ -21,7 +21,7 @@ DEBUG = config("DEBUG", default=False, cast=bool)
 
 ALLOWED_HOSTS = config(
     "ALLOWED_HOSTS",
-    default="localhost,127.0.0.1,.localhost,.up.railway.app,terra-trail-backend.onrender.com,terratrail.app,healthcheck.railway.app,api.terratrail.app",
+    default="localhost,127.0.0.1,.localhost,.up.railway.app,terra-trail-backend.onrender.com,terratrail.app,healthcheck.railway.app,api.terratrail.app,dashboard.terratrail.app",
     cast=Csv(),
 )
 
@@ -266,6 +266,7 @@ SWAGGER_SETTINGS = {
 # ---------------------------------------------------------------------------
 
 import os as _os
+
 # Railway injects REDIS_URL when a Redis service is linked — use it as the
 # fallback for both broker and result backend so no extra env vars are needed.
 _redis_url = _os.environ.get("REDIS_URL", "redis://localhost:6379/0")
@@ -296,6 +297,7 @@ CORS_ALLOWED_ORIGINS = config(
         "https://terratrail.app,"
         "https://www.terratrail.app,"
         "https://api.terratrail.app,"
+        "dashboard.terratrail.app,"
     ),
     cast=Csv(),
 )
