@@ -1,6 +1,9 @@
 #!/bin/bash
 set -e
 
+echo "--- Starting Celery Worker (background) ---"
+celery -A terratrail worker -l info --concurrency=2 &
+
 echo "--- Starting Gunicorn ---"
 echo "Settings: $DJANGO_SETTINGS_MODULE | Port: ${PORT:-8000}"
 PORT="${PORT:-8000}"

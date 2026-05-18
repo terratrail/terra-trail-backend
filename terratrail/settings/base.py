@@ -265,7 +265,11 @@ SWAGGER_SETTINGS = {
 # Celery
 # ---------------------------------------------------------------------------
 
-CELERY_BROKER_URL = config("CELERY_BROKER_URL", default="redis://localhost:6379/0")
+import os as _os
+# Railway injects REDIS_URL when a Redis service is linked — use it as the
+# fallback for both broker and result backend so no extra env vars are needed.
+_redis_url = _os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+CELERY_BROKER_URL = config("CELERY_BROKER_URL", default=_redis_url)
 CELERY_RESULT_BACKEND = config("REDIS_URL", default="redis://localhost:6379/0")
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
