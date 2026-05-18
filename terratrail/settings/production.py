@@ -68,15 +68,25 @@ ANYMAIL = {
 MAIL_DOMAIN = config("MAIL_DOMAIN", default="mail.terratrail.app")
 
 # ---------------------------------------------------------------------------
-# Storage — S3
+# Storage — Cloudflare R2 (S3-compatible, free tier)
+# Static files: served by Whitenoise directly from the container (fast, no R2 needed)
+# Media files:  property images, payment receipts, documents → R2
 # ---------------------------------------------------------------------------
 
-AWS_ACCESS_KEY_ID = config("AWS_ACCESS_KEY_ID", default="")
-AWS_SECRET_ACCESS_KEY = config("AWS_SECRET_ACCESS_KEY", default="")
-AWS_STORAGE_BUCKET_NAME = config("AWS_STORAGE_BUCKET_NAME", default="")
-AWS_S3_REGION_NAME = config("AWS_S3_REGION_NAME", default="us-east-1")
-AWS_S3_FILE_OVERWRITE = False
-AWS_DEFAULT_ACL = None
+_cf_account_id = config("CF_ACCOUNT_ID", default="")
+
+AWS_ACCESS_KEY_ID       = config("CF_R2_ACCESS_KEY_ID", default="")
+AWS_SECRET_ACCESS_KEY   = config("CF_R2_SECRET_ACCESS_KEY", default="")
+AWS_STORAGE_BUCKET_NAME = config("CF_R2_BUCKET_NAME", default="terratrail")
+AWS_S3_ENDPOINT_URL     = f"https://{_cf_account_id}.r2.cloudflarestorage.com"
+AWS_S3_REGION_NAME      = "auto"          # R2 requires "auto"
+AWS_S3_FILE_OVERWRITE   = False
+AWS_DEFAULT_ACL         = None            # R2 manages access at the bucket level
+AWS_QUERYSTRING_AUTH    = False           # serve files via plain public URL
+AWS_S3_CUSTOM_DOMAIN    = config("CF_R2_PUBLIC_DOMAIN", default="")
+# CF_R2_PUBLIC_DOMAIN: your R2 public bucket domain, e.g.:
+#   pub-xxxxxxxxxxxx.r2.dev          (R2 auto-assigned)
+#   media.terratrail.app             (custom domain on the bucket)
 
 STORAGES = {
     "default": {
